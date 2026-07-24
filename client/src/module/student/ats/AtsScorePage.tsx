@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import toast from "@/components/ui/toast";
@@ -294,6 +294,9 @@ export default function AtsScorePage({ guestMode = false }: { guestMode?: boolea
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
     if (!file) {
       previewUrlRef.current = null;
+      // Syncing the preview URL to the object-URL lifecycle is exactly what this
+      // effect is for; the synchronous clear is intended, not a cascading render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPreviewUrl("");
       return;
     }

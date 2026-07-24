@@ -12,6 +12,42 @@ interface Packet {
   state: "sent" | "acked" | "lost" | "retransmit"
 }
 
+// Declared at module scope (not inside Anim5D's render) so React keeps a stable
+// component identity across re-renders. It only depends on its props and the
+// module-level TOTAL constant, so it needs nothing from the parent closure.
+function PktGrid({ packets, proto }: { packets: Packet[]; proto: "tcp" | "udp" }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {Array.from({ length: TOTAL }, (_, i) => {
+        const p = packets.find(x => x.id === i)
+        const color = !p
+          ? "#1E293B"
+          : p.state === "acked"
+            ? "#10B981"
+            : p.state === "lost"
+              ? "#EF4444"
+              : p.state === "retransmit"
+                ? "#F59E0B"
+                : proto === "tcp" ? "#7C3AED" : "#2563EB"
+        return (
+          <motion.div
+            key={i}
+            animate={{ backgroundColor: color }}
+            transition={{ duration: 0.2 }}
+            className="w-7 h-7 rounded flex items-center justify-center border border-[#0F172A]"
+            title={p?.state ?? "pending"}
+          >
+            <span className="text-[8px] text-white/60 font-mono">{i + 1}</span>
+            {p?.state === "retransmit" && (
+              <span className="absolute text-[6px] text-amber-200">↺</span>
+            )}
+          </motion.div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function Anim5D() {
   const [tcpPkts,  setTcpPkts]  = useState<Packet[]>([])
   const [udpPkts,  setUdpPkts]  = useState<Packet[]>([])
@@ -87,39 +123,6 @@ export default function Anim5D() {
 
   const tcpDelivered = tcpPkts.filter(p => p.state === "acked").length
   const udpDelivered = udpPkts.filter(p => p.state === "sent").length
-
-  function PktGrid({ packets, proto }: { packets: Packet[]; proto: "tcp"|"udp" }) {
-    return (
-      <div className="flex flex-wrap gap-1">
-        {Array.from({ length: TOTAL }, (_, i) => {
-          const p = packets.find(x => x.id === i)
-          const color = !p
-            ? "#1E293B"
-            : p.state === "acked"
-              ? "#10B981"
-              : p.state === "lost"
-                ? "#EF4444"
-                : p.state === "retransmit"
-                  ? "#F59E0B"
-                  : proto === "tcp" ? "#7C3AED" : "#2563EB"
-          return (
-            <motion.div
-              key={i}
-              animate={{ backgroundColor: color }}
-              transition={{ duration: 0.2 }}
-              className="w-7 h-7 rounded flex items-center justify-center border border-[#0F172A]"
-              title={p?.state ?? "pending"}
-            >
-              <span className="text-[8px] text-white/60 font-mono">{i + 1}</span>
-              {p?.state === "retransmit" && (
-                <span className="absolute text-[6px] text-amber-200">↺</span>
-              )}
-            </motion.div>
-          )
-        })}
-      </div>
-    )
-  }
 
   return (
     <div className="bg-[#0F172A] p-5 flex flex-col gap-5 min-h-[400px]">

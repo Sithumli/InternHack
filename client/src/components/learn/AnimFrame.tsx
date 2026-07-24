@@ -23,6 +23,8 @@ interface AnimContextValue {
 
 const AnimContext = createContext<AnimContextValue | null>(null)
 
+// Context hook co-located with its <AnimFrame> provider by design.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAnim(): AnimContextValue {
   const ctx = useContext(AnimContext)
   if (!ctx) {

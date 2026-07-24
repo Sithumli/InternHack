@@ -26,12 +26,14 @@ export default function Anim2C() {
   const [phase,   setPhase]   = useState(0)     // 0 = idle, 1..N = steps revealed
   const [running, setRunning] = useState(false)
 
+  /* eslint-disable react-hooks/set-state-in-effect -- state-machine step; stopping at the last step is intentional */
   useEffect(() => {
     if (!running) return
     if (phase >= STEPS.length) { setRunning(false); return }
     const t = setTimeout(() => setPhase(p => p + 1), 1100)
     return () => clearTimeout(t)
   }, [running, phase])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function start() { setPhase(1); setRunning(true) }
   function reset() { setPhase(0); setRunning(false) }

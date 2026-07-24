@@ -19,6 +19,8 @@ export interface LessonStepperState {
  * know whether there is another in-lesson tab to step through before it
  * should navigate to the next lesson. Set once per lesson page, consumed
  * here so no per-lesson-file prop threading is needed. */
+// Co-located with its provider on purpose; only two files consume it.
+// eslint-disable-next-line react-refresh/only-export-components
 export const LessonStepperContext = createContext<
   ((state: LessonStepperState | null) => void) | null
 >(null);
@@ -70,6 +72,9 @@ export function LessonShell({
         : { hasNextTab: false, advanceTab: () => {} },
     );
     return () => reportStepper(null);
+    // nextTab?.id is the intended trigger; depending on the whole nextTab object
+    // would re-run this on every render and re-fire reportStepper needlessly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportStepper, nextTab?.id]);
 
   return (

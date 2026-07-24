@@ -34,6 +34,7 @@ export default function Anim4D() {
   const [selected, setSelected] = useState<string | null>(null)
   const [done,     setDone]     = useState<string[]>([])
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pidRef = useRef(0)
 
   function clearT() { if (timerRef.current) clearTimeout(timerRef.current) }
 
@@ -41,7 +42,9 @@ export default function Anim4D() {
     clearT()
     const host = PRIVATE_HOSTS.find(h => h.id === hostId)!
     const port = NAT_PORTS[hostId]
-    const pid  = `${hostId}-${Date.now()}`
+    // Monotonic counter instead of Date.now(): a unique, stable id without
+    // calling an impure function that the render-purity lint rule flags.
+    const pid  = `${hostId}-${++pidRef.current}`
 
     // add outbound packet
     setPackets(prev => [...prev, {

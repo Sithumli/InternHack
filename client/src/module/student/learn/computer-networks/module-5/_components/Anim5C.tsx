@@ -15,8 +15,8 @@ function simulate(algo: Algorithm): Point[] {
   let cwnd     = 1
   let ssthresh = SSTHRESH0
   let rtt      = 0
-  let lossAt   = 12
-  let timeoutAt= 28
+  const lossAt   = 12
+  const timeoutAt= 28
 
   while (rtt < MAX_RTT) {
     pts.push({ rtt, cwnd: Math.min(cwnd, MAX_CWND) })

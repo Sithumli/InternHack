@@ -65,10 +65,12 @@ export default function Anim1D() {
   const [reqCount,     setReqCount]     = useState(0)
 
   // reset on model switch
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional reset when the `model` prop changes */
   useEffect(() => {
     setCsPhase("idle")
     setActiveClient(0)
   }, [model])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // CS state machine: idle → request → respond → (next client) → idle …
   useEffect(() => {
