@@ -6,6 +6,7 @@ import { generateToken } from '../../../utils/jwt.utils.js';
 import { sendEmail } from '../../../utils/email.utils.js';
 import { createUniqueProfileSlug } from '../../../lib/slug.js';
 import { invalidateVersionCache } from '../../../middleware/auth.middleware.js';
+import type { user as User } from '@prisma/client';
 
 // --- MOCK DEPENDENCIES ---
 vi.mock('../../../database/db.js', () => ({
@@ -39,6 +40,36 @@ vi.mock('../../../middleware/auth.middleware.js', () => ({
   invalidateVersionCache: vi.fn(),
 }));
 
+// --- TYPED TEST BUILDER ---
+const createMockUser = (overrides: Record<string, any> = {}): User => ({
+  id: 1,
+  name: 'John Doe',
+  email: 'john@example.com',
+  password: 'hashed_password',
+  role: 'STUDENT',
+  contactNo: null,
+  isActive: true,
+  isVerified: true,
+  profilePic: null,
+  profileSlug: 'john-doe-1',
+  company: null,
+  designation: null,
+  createdAt: new Date(),
+  subscriptionPlan: 'FREE',
+  subscriptionStatus: 'ACTIVE',
+  subscriptionEndDate: null,
+  tokenVersion: 1,
+  verificationOtp: null,
+  otpExpiresAt: null,
+  verificationAttempts: 0,
+  verificationLockedUntil: null,
+  resetPasswordOtp: null,
+  resetOtpExpiresAt: null,
+  passwordResetAttempts: 0,
+  passwordResetLockedUntil: null,
+  ...overrides,
+} as unknown as User);
+
 describe('Auth Service', () => {
   let authService: AuthService;
 
@@ -50,14 +81,14 @@ describe('Auth Service', () => {
   describe('register', () => {
     it('successfully registers a new user', async () => {
       const mockInput = { name: 'John Doe', email: 'john@example.com', password: 'password123' };
-      const mockCreatedUser = { id: 1, name: 'John Doe', email: 'john@example.com', role: 'STUDENT' };
+      const mockCreatedUser = createMockUser();
 
       vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
       vi.mocked(hashPassword).mockResolvedValue('hashed_password');
-      vi.mocked(prisma.user.create).mockResolvedValue(mockCreatedUser as any);
+      vi.mocked(prisma.user.create).mockResolvedValue(mockCreatedUser);
       vi.mocked(createUniqueProfileSlug).mockResolvedValue('john-doe-1');
 
-      const result = await authService.register(mockInput as any);
+      const result = await authService.register(mockInput);
 
       expect(prisma.user.create).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({
@@ -65,15 +96,16 @@ describe('Auth Service', () => {
           password: 'hashed_password',
         })
       }));
-      expect(prisma.user.update).toHaveBeenCalled();
+      // Replaced prisma.user.update check with the slug collaborator check per review
+      expect(createUniqueProfileSlug).toHaveBeenCalledWith('John Doe', 1, prisma);
       expect(sendEmail).toHaveBeenCalled();
-      expect(result.user).toEqual(expect.objectContaining(mockCreatedUser));
+      expect(result.user).toEqual(expect.objectContaining({ id: 1, email: 'john@example.com' }));
     });
 
     it('throws an error if email is already registered', async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: 1, email: 'john@example.com' } as any);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(createMockUser());
 
-      await expect(authService.register({ name: 'John', email: 'john@example.com', password: 'pass' } as any))
+      await expect(authService.register({ name: 'John', email: 'john@example.com', password: 'pass' }))
         .rejects.toThrow('Email already registered');
       
       expect(prisma.user.create).not.toHaveBeenCalled();
@@ -82,9 +114,9 @@ describe('Auth Service', () => {
 
   describe('login', () => {
     it('successfully logs in a verified user', async () => {
-      const mockUser = { id: 1, email: 'john@example.com', password: 'hashed_password', isActive: true, isVerified: true, role: 'STUDENT', tokenVersion: 1 };
+      const mockUser = createMockUser();
       
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
       vi.mocked(comparePassword).mockResolvedValue(true);
       vi.mocked(generateToken).mockReturnValue('mock_jwt_token');
 
@@ -95,9 +127,9 @@ describe('Auth Service', () => {
     });
 
     it('throws an error for wrong password', async () => {
-      const mockUser = { id: 1, email: 'john@example.com', password: 'hashed_password', isActive: true };
+      const mockUser = createMockUser();
       
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
       vi.mocked(comparePassword).mockResolvedValue(false);
 
       await expect(authService.login({ email: 'john@example.com', password: 'wrongpassword' }))
@@ -105,9 +137,9 @@ describe('Auth Service', () => {
     });
 
     it('throws an error and sends OTP if email is not verified', async () => {
-      const mockUser = { id: 1, email: 'john@example.com', password: 'hashed_password', isActive: true, isVerified: false, role: 'STUDENT' };
+      const mockUser = createMockUser({ isVerified: false });
       
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
       vi.mocked(comparePassword).mockResolvedValue(true);
 
       await expect(authService.login({ email: 'john@example.com', password: 'password123' }))
@@ -120,8 +152,8 @@ describe('Auth Service', () => {
 
   describe('forgotPassword', () => {
     it('generates an OTP and sends an email if user exists', async () => {
-      const mockUser = { id: 1, email: 'john@example.com', name: 'John' };
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+      const mockUser = createMockUser();
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
 
       await authService.forgotPassword('john@example.com');
 
@@ -146,13 +178,11 @@ describe('Auth Service', () => {
 
   describe('resetPassword', () => {
     it('successfully resets password and increments tokenVersion', async () => {
-      const mockUser = { 
-        id: 1, 
-        email: 'john@example.com', 
+      const mockUser = createMockUser({ 
         resetPasswordOtp: 'hashed_otp',
         resetOtpExpiresAt: new Date(Date.now() + 10000)
-      };
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+      });
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
       vi.mocked(comparePassword).mockResolvedValue(true);
       vi.mocked(hashPassword).mockResolvedValue('new_hashed_password');
 
@@ -173,26 +203,23 @@ describe('Auth Service', () => {
     });
 
     it('throws an error if the reset token is expired', async () => {
-      const mockUser = { 
-        id: 1, 
-        email: 'john@example.com', 
+      const mockUser = createMockUser({ 
         resetPasswordOtp: 'hashed_otp',
-        resetOtpExpiresAt: new Date(Date.now() - 10000)
-      };
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+        resetOtpExpiresAt: new Date(Date.now() - 10000) // Past date
+      });
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
 
       await expect(authService.resetPassword('john@example.com', '123456', 'new_password'))
         .rejects.toThrow('Reset code has expired');
     });
 
     it('increments failed attempts and throws if OTP is incorrect', async () => {
-      const mockUser = { 
-        id: 1, 
+      const mockUser = createMockUser({ 
         passwordResetAttempts: 0,
         resetPasswordOtp: 'hashed_otp',
         resetOtpExpiresAt: new Date(Date.now() + 10000) 
-      };
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+      });
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
       vi.mocked(comparePassword).mockResolvedValue(false);
 
       await expect(authService.resetPassword('john@example.com', 'wrong_otp', 'new_password'))
@@ -200,6 +227,61 @@ describe('Auth Service', () => {
 
       expect(prisma.user.update).toHaveBeenCalledWith(expect.objectContaining({
         data: { passwordResetAttempts: 1 }
+      }));
+    });
+
+    it('locks account after 3 failed password reset attempts', async () => {
+      const mockUser = createMockUser({ 
+        passwordResetAttempts: 2, // 2 previous attempts
+        resetPasswordOtp: 'hashed_otp',
+        resetOtpExpiresAt: new Date(Date.now() + 10000) 
+      });
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
+      vi.mocked(comparePassword).mockResolvedValue(false);
+
+      await expect(authService.resetPassword('john@example.com', 'wrong_otp', 'new_password'))
+        .rejects.toThrow('Too many failed attempts. Account locked for 30 minutes for security');
+
+      expect(prisma.user.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: { 
+          passwordResetAttempts: 3, 
+          passwordResetLockedUntil: expect.any(Date)
+        }
+      }));
+    });
+
+    it('rejects password reset if account is currently locked', async () => {
+      const lockTime = new Date(Date.now() + 15 * 60 * 1000); // 15 mins in future
+      const mockUser = createMockUser({
+        passwordResetLockedUntil: lockTime,
+      });
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
+
+      await expect(authService.resetPassword('john@example.com', '123456', 'new_password'))
+        .rejects.toThrow('Too many failed attempts. Please try again in 15 minutes');
+      
+      // Asserts that OTP check is never reached
+      expect(comparePassword).not.toHaveBeenCalled();
+    });
+
+    it('allows password reset if the lockout period has expired', async () => {
+      const pastLockTime = new Date(Date.now() - 5 * 60 * 1000); // 5 mins in past
+      const mockUser = createMockUser({
+        passwordResetLockedUntil: pastLockTime,
+        resetPasswordOtp: 'hashed_otp',
+        resetOtpExpiresAt: new Date(Date.now() + 10000)
+      });
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
+      vi.mocked(comparePassword).mockResolvedValue(true);
+      vi.mocked(hashPassword).mockResolvedValue('new_hashed_password');
+
+      await authService.resetPassword('john@example.com', '123456', 'new_password');
+
+      expect(prisma.user.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+          password: 'new_hashed_password',
+          passwordResetLockedUntil: null,
+        })
       }));
     });
   });
