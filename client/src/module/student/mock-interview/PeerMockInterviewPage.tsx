@@ -457,8 +457,21 @@ function HistorySection({ userId }: { userId: number }) {
                     Partner: <span className="font-medium text-stone-700 dark:text-stone-300">{partner.name}</span>
                   </p>
                 )}
+
+                {/* Consistent WhatsApp sharing for Scheduled Peer Sessions in History */}
+                {pairing.status === "SCHEDULED" && partner?.contactNo && whatsAppLink(partner.contactNo) && (
+                  <a
+                    href={whatsAppLink(partner.contactNo)!}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-lime-600 dark:text-lime-400 hover:underline block"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    Message {partner.name.split(" ")[0]} on WhatsApp
+                  </a>
+                )}
               </div>
-              <span className={`text-xs font-mono uppercase tracking-widest px-2 py-0.5 rounded ${pairing.status === "COMPLETED" ? "bg-lime-400/10 text-lime-600 dark:text-lime-400" : "bg-red-400/10 text-red-600 dark:text-red-400"}`}>
+              <span className={`text-xs font-mono uppercase tracking-widest px-2 py-0.5 rounded ${pairing.status === "COMPLETED" ? "bg-lime-400/10 text-lime-600 dark:text-lime-400" : pairing.status === "SCHEDULED" ? "bg-lime-400/10 text-lime-600 dark:text-lime-400" : "bg-red-400/10 text-red-600 dark:text-red-400"}`}>
                 {pairing.status}
               </span>
             </div>
@@ -1155,8 +1168,7 @@ export default function PeerMockInterviewPage() {
                   </Button>
                 </div>
               )}
-
-              {pairing && pairing.status === "COMPLETED" && !alreadyRated && (
+   {pairing && pairing.status === "COMPLETED" && !alreadyRated && (
                 <div className="bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 rounded-md p-5 flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <h3 className="font-bold text-amber-900 dark:text-amber-200 text-sm">Review your session</h3>
