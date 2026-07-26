@@ -41,7 +41,7 @@ vi.mock('../../../middleware/auth.middleware.js', () => ({
 }));
 
 // --- TYPED TEST BUILDER ---
-const createMockUser = (overrides: Record<string, any> = {}): User => ({
+const createMockUser = (overrides: Partial<User> = {}): User => ({
   id: 1,
   name: 'John Doe',
   email: 'john@example.com',
@@ -68,7 +68,7 @@ const createMockUser = (overrides: Record<string, any> = {}): User => ({
   passwordResetAttempts: 0,
   passwordResetLockedUntil: null,
   ...overrides,
-} as unknown as User);
+} satisfies User);
 
 describe('Auth Service', () => {
   let authService: AuthService;
