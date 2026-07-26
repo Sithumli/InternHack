@@ -109,7 +109,18 @@ export async function signUrl(url: string, expiresIn = 3600): Promise<string> {
 
 /** Sign every URL in a string array (e.g. user.resumes). */
 export async function signUrls(urls: string[], expiresIn = 3600): Promise<string[]> {
-  return Promise.all(urls.map((u) => signUrl(u, expiresIn)));
+  // Cap concurrency to prevent spiking outbound calls and resource contention
+  const CONCURRENCY_LIMIT = 10;
+  const results: string[] = [];
+
+  for (let i = 0; i < urls.length; i += CONCURRENCY_LIMIT) {
+    const chunk = urls.slice(i, i + CONCURRENCY_LIMIT);
+    // Process only 10 URLs concurrently
+    const signedChunk = await Promise.all(chunk.map((u) => signUrl(u, expiresIn)));
+    results.push(...signedChunk);
+  }
+
+  return results;
 }
 
 
