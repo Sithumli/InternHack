@@ -471,7 +471,7 @@ function HistorySection({ userId }: { userId: number }) {
                   </a>
                 )}
               </div>
-              <span className={`text-xs font-mono uppercase tracking-widest px-2 py-0.5 rounded ${pairing.status === "COMPLETED" ? "bg-lime-400/10 text-lime-600 dark:text-lime-400" : pairing.status === "SCHEDULED" ? "bg-lime-400/10 text-lime-600 dark:text-lime-400" : "bg-red-400/10 text-red-600 dark:text-red-400"}`}>
+              <span className={`text-xs font-mono uppercase tracking-widest px-2 py-0.5 rounded ${pairing.status === "COMPLETED" ? "bg-lime-400/10 text-lime-600 dark:text-lime-400" : pairing.status === "SCHEDULED" ? "bg-blue-400/10 text-blue-600 dark:text-blue-400" : "bg-red-400/10 text-red-600 dark:text-red-400"}`}>
                 {pairing.status}
               </span>
             </div>
@@ -773,7 +773,7 @@ export default function PeerMockInterviewPage() {
       return false;
     }
     return true;
-  };
+  }
 
   const handleSavePreferences = () => {
     if (!requireCustomTopic()) return;
@@ -1168,7 +1168,7 @@ export default function PeerMockInterviewPage() {
                   </Button>
                 </div>
               )}
-   {pairing && pairing.status === "COMPLETED" && !alreadyRated && (
+              {pairing && pairing.status === "COMPLETED" && !alreadyRated && (
                 <div className="bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/20 rounded-md p-5 flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <h3 className="font-bold text-amber-900 dark:text-amber-200 text-sm">Review your session</h3>
@@ -1187,7 +1187,6 @@ export default function PeerMockInterviewPage() {
                 </div>
               )}
             </div>
-
             {/* Right Column: Preferences Settings */}
             <div className="space-y-6">
               <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-white/10 rounded-md overflow-hidden">

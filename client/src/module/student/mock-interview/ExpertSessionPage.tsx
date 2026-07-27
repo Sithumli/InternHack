@@ -13,7 +13,6 @@ import {
   Clock,
   IndianRupee,
   Check,
-  MessageCircle,
 } from "lucide-react";
 import { SEO } from "../../../components/SEO";
 import api from "../../../lib/axios";
@@ -21,7 +20,6 @@ import { Button } from "../../../components/ui/button";
 import { Textarea } from "../../../components/ui/textarea";
 import { useAuthStore } from "../../../lib/auth.store";
 import { queryKeys } from "../../../lib/query-keys";
-import { whatsAppLink } from "../../../lib/whatsapp";
 
 type Step = "prep" | "slot" | "review" | "confirmed";
 
@@ -64,10 +62,6 @@ interface ExpertSession {
   targetRole: string | null;
   experienceLevel: string | null;
   focusAreas: string[];
-  expert?: {
-    name: string;
-    contactNo?: string | null;
-  };
 }
 
 function formatSlotDay(iso: string): string {
@@ -690,47 +684,23 @@ export default function ExpertSessionPage() {
                 {mySessions.map((s) => (
                   <div
                     key={s.id}
-                    className="flex flex-col gap-3 rounded-md border border-stone-200 dark:border-white/10 bg-white dark:bg-stone-900 px-4 py-3"
+                    className="flex items-center justify-between rounded-md border border-stone-200 dark:border-white/10 bg-white dark:bg-stone-900 px-4 py-3"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
-                          <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                          {formatSlotDay(s.scheduledAt)} &middot; {formatSlotTime(s.scheduledAt)} IST
-                        </div>
-                        {s.expert && (
-                          <p className="text-xs text-stone-500">
-                            Expert: <span className="font-medium text-stone-700 dark:text-stone-300">{s.expert.name}</span>
-                          </p>
-                        )}
-                      </div>
-                      <span
-                        className={`text-xs font-mono uppercase tracking-widest px-2 py-0.5 rounded shrink-0 ${
-                          s.status === "SCHEDULED"
-                            ? "bg-lime-400/10 text-lime-600 dark:text-lime-400"
-                            : s.status === "COMPLETED"
-                              ? "bg-stone-100 dark:bg-white/5 text-stone-500"
-                              : "bg-red-400/10 text-red-600 dark:text-red-400"
-                        }`}
-                      >
-                        {s.status}
-                      </span>
+                    <div className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-300">
+                      <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                      {formatSlotDay(s.scheduledAt)} &middot; {formatSlotTime(s.scheduledAt)} IST
                     </div>
-
-                    {/* Consistent WhatsApp sharing for Scheduled Expert Sessions */}
-                    {s.status === "SCHEDULED" && s.expert?.contactNo && whatsAppLink(s.expert.contactNo) && (
-                      <div className="pt-2 border-t border-stone-100 dark:border-white/5">
-                        <a
-                          href={whatsAppLink(s.expert.contactNo)!}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-lime-600 dark:text-lime-400 hover:underline"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          Message {s.expert.name.split(" ")[0]} on WhatsApp
-                        </a>
-                      </div>
-                    )}
+                    <span
+                      className={`text-xs font-mono uppercase tracking-widest px-2 py-0.5 rounded shrink-0 ${
+                        s.status === "SCHEDULED"
+                          ? "bg-lime-400/10 text-lime-600 dark:text-lime-400"
+                          : s.status === "COMPLETED"
+                            ? "bg-stone-100 dark:bg-white/5 text-stone-500"
+                            : "bg-red-400/10 text-red-600 dark:text-red-400"
+                      }`}
+                    >
+                      {s.status}
+                    </span>
                   </div>
                 ))}
               </div>
