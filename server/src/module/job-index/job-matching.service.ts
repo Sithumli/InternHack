@@ -133,18 +133,24 @@ export class JobMatchingService {
           userMatches.set(pref.userId, results);
           for (const r of results) allJobIds.add(r.id);
         }
-      } catch {
-        // pgvector / embedding columns not set up yet, skip silently
+      } catch (err) {
+        // pgvector / embedding columns not set up yet — but also logs unexpected failures
+        console.error(`generateMatches: vector search failed for user ${pref.userId}`, err);
       }
     }
 
     if (allJobIds.size === 0) return 0;
 
-    // 2. Batch the reads for jobs using a single findMany
-    const jobs = await prisma.jobIndex.findMany({
-      where: { id: { in: Array.from(allJobIds) } },
-    });
-    const jobMap = new Map(jobs.map((j) => [j.id, j]));
+    // 2. Batch the reads for jobs, chunked to respect Postgres parameter limits
+    const READ_CHUNK_SIZE = 1000;
+    const jobIdList = Array.from(allJobIds);
+    const jobMap = new Map<number, any>();
+    
+    for (let i = 0; i < jobIdList.length; i += READ_CHUNK_SIZE) {
+      const chunk = jobIdList.slice(i, i + READ_CHUNK_SIZE);
+      const jobs = await prisma.jobIndex.findMany({ where: { id: { in: chunk } } });
+      for (const j of jobs) jobMap.set(j.id, j);
+    }
 
     // 3. Compute matches and candidate records in memory
     const matchCandidates: Array<{
@@ -176,19 +182,18 @@ export class JobMatchingService {
 
     if (matchCandidates.length === 0) return 0;
 
-    // 4. Batch fetch existing records to compute diffs in memory (Optimized IN query)
+    // 4. Batch fetch existing records to compute diffs in memory (Chunked OR query)
     const existingMatches = new Set<string>();
     
-    const existing = await prisma.jobMatch.findMany({
-      where: {
-        userId: { in: [...new Set(matchCandidates.map((c) => c.userId))] },
-        jobIndexId: { in: [...new Set(matchCandidates.map((c) => c.jobIndexId))] },
-      },
-      select: { userId: true, jobIndexId: true },
-    });
-    
-    for (const e of existing) {
-      existingMatches.add(`${e.userId}-${e.jobIndexId}`);
+    for (let i = 0; i < matchCandidates.length; i += READ_CHUNK_SIZE) {
+      const chunk = matchCandidates.slice(i, i + READ_CHUNK_SIZE);
+      const existing = await prisma.jobMatch.findMany({
+        where: { OR: chunk.map((c) => ({ userId: c.userId, jobIndexId: c.jobIndexId })) },
+        select: { userId: true, jobIndexId: true },
+      });
+      for (const e of existing) {
+        existingMatches.add(`${e.userId}-${e.jobIndexId}`);
+      }
     }
 
     // 5. Separate candidates into Creates and Updates
@@ -213,16 +218,15 @@ export class JobMatchingService {
         data: toCreate,
         skipDuplicates: true,
       });
-      matchCount += createResult.count; // Use actual db count, not array length
+      matchCount += createResult.count;
     }
 
     // Apply updates in a single chunked transaction to prevent pool exhaustion
     if (toUpdate.length > 0) {
-      const UPDATE_CHUNK_SIZE = 100; // Reduced from 1000 to prevent connection timeouts
+      const UPDATE_CHUNK_SIZE = 100;
       for (let i = 0; i < toUpdate.length; i += UPDATE_CHUNK_SIZE) {
         const chunk = toUpdate.slice(i, i + UPDATE_CHUNK_SIZE);
         
-        // Use updateMany so concurrent deletions don't throw P2025 and abort the batch
         const updatePromises = chunk.map((u) =>
           prisma.jobMatch.updateMany({
             where: { userId: u.userId, jobIndexId: u.jobIndexId },
@@ -237,8 +241,6 @@ export class JobMatchingService {
         );
         
         const updateResults = await prisma.$transaction(updatePromises);
-        
-        // Sum up the actual number of rows updated in this transaction
         matchCount += updateResults.reduce((sum, result) => sum + result.count, 0);
       }
     }
