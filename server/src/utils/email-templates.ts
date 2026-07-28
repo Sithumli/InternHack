@@ -1887,3 +1887,70 @@ export function peerMockCompletedEmailHtml(args: { recipientName: string }): str
   `;
   return peerMockLayout(`Nicely done, ${firstName}`, body);
 }
+
+/**
+ * Cover email for the internship completion certificate + letter of
+ * recommendation. Both documents ride along as PDF attachments.
+ */
+export function internshipDocsEmailHtml(args: {
+  internName: string;
+  role: string;
+  term: string;
+  signatoryName: string;
+  signatoryTitle: string;
+  signatoryEmail: string;
+}): string {
+  const firstName = escapeHtml(args.internName.split(" ")[0] || args.internName);
+  const role = escapeHtml(args.role);
+  const term = escapeHtml(args.term);
+  const signatoryName = escapeHtml(args.signatoryName);
+  const signatoryTitle = escapeHtml(args.signatoryTitle);
+  const signatoryEmail = escapeHtml(args.signatoryEmail);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
+<body style="margin:0;padding:0;background-color:#ffffff;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr><td style="background-color:#0a0a0a;padding:28px 24px;text-align:center;">
+      <h1 style="margin:0;font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">InternHack</h1>
+    </td></tr>
+    <tr><td style="padding:28px 24px;">
+      <h2 style="margin:0 0 6px;font-size:22px;font-weight:700;color:#18181b;">Your internship certificate, ${firstName}</h2>
+      <p style="margin:0 0 18px;font-size:15px;line-height:1.7;color:#3f3f46;">
+        Congratulations on completing your internship at InternHack as a <strong>${role}</strong>, ${term}.
+        Thank you for the work you put in over these months, you shipped real things that real users depend on.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+        <tr><td style="border:1px solid #d9f99d;background-color:#f7fee7;padding:16px 18px;">
+          <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:#4d7c0f;letter-spacing:1.2px;">ATTACHED TO THIS EMAIL</p>
+          <p style="margin:0 0 6px;font-size:14px;line-height:1.6;color:#3f3f46;">
+            <strong>Certificate of Internship</strong> (PDF)
+          </p>
+          <p style="margin:0;font-size:14px;line-height:1.6;color:#3f3f46;">
+            <strong>Letter of Recommendation</strong> (PDF)
+          </p>
+        </td></tr>
+      </table>
+      <p style="margin:0 0 18px;font-size:14px;line-height:1.7;color:#3f3f46;">
+        Both documents are yours to use. Attach them to job applications, add the certificate to your LinkedIn under
+        Licenses &amp; Certifications, and share the recommendation letter with anyone who asks for a reference.
+      </p>
+      <p style="margin:0 0 4px;font-size:14px;line-height:1.7;color:#3f3f46;">
+        If you need anything changed (a spelling correction, a different title) or want me to speak to a recruiter directly,
+        just reply to this email.
+      </p>
+      <p style="margin:22px 0 0;font-size:14px;line-height:1.6;color:#3f3f46;">
+        All the best,<br />
+        <strong>${signatoryName}</strong><br />
+        <span style="color:#71717a;">${signatoryTitle}, InternHack</span><br />
+        <a href="mailto:${signatoryEmail}" style="color:#4d7c0f;text-decoration:none;">${signatoryEmail}</a>
+      </p>
+    </td></tr>
+    <tr><td style="padding:20px 24px;border-top:1px solid #e4e4e7;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#a1a1aa;">&copy; ${new Date().getFullYear()} InternHack. All rights reserved.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}

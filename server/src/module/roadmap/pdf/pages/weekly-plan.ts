@@ -70,7 +70,9 @@ export function drawWeeklyPlan(
 
       pageBreakIfNeeded(doc, 30);
       doc.fillColor(colors.ink).fontSize(10.5).font("Helvetica-Bold");
-      doc.text(`▸  ${topic.title}`, MARGIN + 8, doc.y, { width: A4_WIDTH - MARGIN * 2 - 80, ellipsis: true });
+      // Bullet, not ▸: the pointer glyph is missing from Helvetica's WinAnsi
+      // encoding. Matches the unresolved-slug branch above.
+      doc.text(`•  ${topic.title}`, MARGIN + 8, doc.y, { width: A4_WIDTH - MARGIN * 2 - 80, ellipsis: true });
       const lineY = doc.y;
       doc.fillColor(colors.faint).fontSize(8).font("Helvetica");
       doc.text(`${topic.estimatedHours}h · ${stars(topic.difficulty)}`, MARGIN, lineY - 12, {

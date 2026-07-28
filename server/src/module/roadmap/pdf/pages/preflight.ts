@@ -52,8 +52,11 @@ export function drawPreflight(doc: PDFKit.PDFDocument, _input: RoadmapPdfInput, 
 
     for (const item of group.items) {
       pageBreakIfNeeded(doc, 40);
+      // Checkbox is drawn rather than typed: the ▢ glyph is absent from
+      // Helvetica's WinAnsi encoding and comes out as mojibake.
+      doc.rect(MARGIN + 1, doc.y + 3, 8, 8).lineWidth(0.8).stroke(colors.faint);
       doc.fillColor(colors.ink).fontSize(11).font("Helvetica-Bold");
-      doc.text(`▢  ${item.name}`, MARGIN, doc.y, { width: A4_WIDTH - MARGIN * 2 });
+      doc.text(item.name, MARGIN + 16, doc.y, { width: A4_WIDTH - MARGIN * 2 - 16 });
       doc.fillColor(colors.mute).fontSize(9.5).font("Helvetica");
       doc.text(item.why, MARGIN + 16, doc.y, { width: A4_WIDTH - MARGIN * 2 - 16, lineGap: 2 });
       doc.moveDown(0.4);

@@ -28,3 +28,6 @@ REPO_MAP.md
 nul
 .vercel
 .env*
+
+# Locally generated PDFs / scratch output
+server/tmp/
