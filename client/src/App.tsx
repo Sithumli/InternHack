@@ -9,15 +9,19 @@ import { LoadingScreen } from "./components/LoadingScreen";
 import BackToTopButton from "./components/common/BackToTopButton";
 import ScrollProgressBar from "./components/common/ScrollProgressBar";
 import ScrollToTop from "./components/common/ScrollToTop";
-const ContributorsPage = lazyWithRetry(() => import("./module/contributors/ContributorsPage"));
-
+// Declared before the first lazyWithRetry() call below. `lazyWithRetry` is a
+// hoisted function declaration, but this is a const, so a call site above this
+// line would hit the temporal dead zone and throw during module evaluation.
 const RETRY_KEY_PREFIX = "lazy-retry:";
 
 function lazyWithRetry<T extends ComponentType<unknown>>(factory: () => Promise<{ default: T }>): LazyExoticComponent<T> {
-  const retryKey = RETRY_KEY_PREFIX + factory.toString();
   return lazy(
     () =>
       factory().catch((err: unknown) => {
+        // Built here rather than in the function body so nothing is read at
+        // module-init time, and so factory.toString() only runs on a failure
+        // instead of once per lazy route on every page load.
+        const retryKey = RETRY_KEY_PREFIX + factory.toString();
         if (!sessionStorage.getItem(retryKey)) {
           sessionStorage.setItem(retryKey, "1");
           window.location.reload();
@@ -27,6 +31,8 @@ function lazyWithRetry<T extends ComponentType<unknown>>(factory: () => Promise<
       }) as Promise<{ default: T }>,
   ) as LazyExoticComponent<T>;
 }
+
+const ContributorsPage = lazyWithRetry(() => import("./module/contributors/ContributorsPage"));
 
 // Public pages
 const LandingPage = lazyWithRetry(() => import("./module/LandingPage/landingPage"));

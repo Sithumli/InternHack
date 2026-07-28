@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { motion } from "framer-motion";
 import { CheckCircle2, ArrowUpRight, Lock } from "lucide-react";
-import { sections, questions } from "./data";
+import { sections, interviewManifest } from "./data";
 import type { InterviewProgress } from "./data/types";
 import { SEO } from "../../../components/SEO";
 import { canonicalUrl, SITE_URL } from "../../../lib/seo.utils";
@@ -115,15 +115,21 @@ export default function InterviewLessonsPage() {
   loadProgress();
 }, [isAuthenticated]);
 
+  // Counts come from the build-time manifest, so this page renders stats without
+  // downloading any question bodies. See the interview-manifest plugin in
+  // vite.config.ts.
   const sectionStats = useMemo(() => {
     return sections.map((section) => {
-      const sectionQuestions = questions.filter((q) => q.sectionId === section.id);
-      const completed = sectionQuestions.filter((q) => progress[q.id]?.completed).length;
-      const total = sectionQuestions.length;
-      const easy = sectionQuestions.filter((q) => q.difficulty === "Beginner").length;
-      const medium = sectionQuestions.filter((q) => q.difficulty === "Intermediate").length;
-      const hard = sectionQuestions.filter((q) => q.difficulty === "Advanced").length;
-      return { ...section, completed, total, easy, medium, hard };
+      const stats = interviewManifest[section.id];
+      const ids = stats?.ids ?? [];
+      return {
+        ...section,
+        completed: ids.filter((id) => progress[id]?.completed).length,
+        total: stats?.total ?? 0,
+        easy: stats?.easy ?? 0,
+        medium: stats?.medium ?? 0,
+        hard: stats?.hard ?? 0,
+      };
     });
   }, [progress]);
 
@@ -133,7 +139,10 @@ export default function InterviewLessonsPage() {
   }, [sectionStats, diffFilter]);
 
   const totalCompleted = Object.values(progress as InterviewProgress).filter((p) => p.completed).length;
-  const totalQuestions = questions.length;
+  const totalQuestions = useMemo(
+    () => Object.values(interviewManifest).reduce((sum, s) => sum + s.total, 0),
+    [],
+  );
   const overallPct = totalQuestions > 0 ? Math.round((totalCompleted / totalQuestions) * 100) : 0;
 
   return (

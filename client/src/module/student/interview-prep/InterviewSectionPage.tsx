@@ -1,9 +1,10 @@
 import { ProgressBar } from "../../../components/ui/ProgressBar";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, Navigate } from "react-router";
 import { motion } from "framer-motion";
 import { CheckCircle2, ArrowUpRight, Building2, ArrowUpDown } from "lucide-react";
-import { sections, questions } from "./data";
+import { sections, loadSectionQuestions } from "./data";
+import type { InterviewQuestion } from "./data/types";
 import { SEO } from "../../../components/SEO";
 import { canonicalUrl } from "../../../lib/seo.utils";
 import { useAuthStore } from "../../../lib/auth.store";
@@ -50,9 +51,29 @@ export default function InterviewSectionPage() {
 
   const section = sections.find((s) => s.id === sectionSlug);
 
+  // Keyed by slug so switching sections never renders the previous section's
+  // questions while the new lesson file is still in flight.
+  const [loaded, setLoaded] = useState<{ slug: string; questions: InterviewQuestion[] } | null>(null);
+
+  useEffect(() => {
+    if (!sectionSlug) return;
+    let active = true;
+    loadSectionQuestions(sectionSlug)
+      .then((questions) => {
+        if (active) setLoaded({ slug: sectionSlug, questions });
+      })
+      .catch((err) => {
+        console.error("Failed to load interview questions", err);
+        if (active) setLoaded({ slug: sectionSlug, questions: [] });
+      });
+    return () => {
+      active = false;
+    };
+  }, [sectionSlug]);
+
   const sectionQuestions = useMemo(
-    () => questions.filter((q) => q.sectionId === sectionSlug).sort((a, b) => a.orderIndex - b.orderIndex),
-    [sectionSlug],
+    () => (loaded && loaded.slug === sectionSlug ? loaded.questions : []),
+    [loaded, sectionSlug],
   );
 
   const availableCompanies = useMemo(() => {

@@ -3,6 +3,59 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import prerender from '@prerenderer/rollup-plugin'
 import path from 'path'
+import fs from 'fs'
+
+// The interview index page shows per-section question counts and how many the
+// user has completed. That used to mean downloading all ~2 MB of lesson JSON
+// just to tally it. This plugin reads the lesson files at build time and emits
+// a compact manifest instead (counts plus question ids, ~18 KB), so the page
+// needs no question bodies at all. Derived on every build, so it cannot drift
+// from the JSON the way a committed generated file would.
+const INTERVIEW_MANIFEST_ID = 'virtual:interview-manifest'
+const INTERVIEW_MANIFEST_RESOLVED = '\0' + INTERVIEW_MANIFEST_ID
+const LESSONS_DIR = path.resolve(__dirname, 'src/module/student/interview-prep/data/lessons')
+
+interface ManifestQuestion { id: string; difficulty: string }
+
+function buildInterviewManifest() {
+  const manifest: Record<string, unknown> = {}
+  for (const file of fs.readdirSync(LESSONS_DIR).filter((f) => f.endsWith('.json'))) {
+    const questions: ManifestQuestion[] = JSON.parse(
+      fs.readFileSync(path.join(LESSONS_DIR, file), 'utf8'),
+    )
+    // Section id matches the JSON basename, same convention data/index.ts uses.
+    manifest[file.replace(/\.json$/, '')] = {
+      total: questions.length,
+      easy: questions.filter((q) => q.difficulty === 'Beginner').length,
+      medium: questions.filter((q) => q.difficulty === 'Intermediate').length,
+      hard: questions.filter((q) => q.difficulty === 'Advanced').length,
+      ids: questions.map((q) => q.id),
+    }
+  }
+  return manifest
+}
+
+function interviewManifestPlugin() {
+  return {
+    name: 'interview-manifest',
+    resolveId(id: string) {
+      return id === INTERVIEW_MANIFEST_ID ? INTERVIEW_MANIFEST_RESOLVED : undefined
+    },
+    load(id: string) {
+      if (id !== INTERVIEW_MANIFEST_RESOLVED) return undefined
+      return `export const interviewManifest = ${JSON.stringify(buildInterviewManifest())};`
+    },
+    // Keep dev in sync when a lesson file is edited.
+    configureServer(server: { watcher: { add: (p: string) => void; on: (e: string, cb: (f: string) => void) => void }; moduleGraph: { getModuleById: (id: string) => unknown }; reloadModule: (m: never) => void }) {
+      server.watcher.add(LESSONS_DIR)
+      server.watcher.on('change', (file: string) => {
+        if (!file.startsWith(LESSONS_DIR)) return
+        const mod = server.moduleGraph.getModuleById(INTERVIEW_MANIFEST_RESOLVED)
+        if (mod) server.reloadModule(mod as never)
+      })
+    },
+  }
+}
 
 // Routes to prerender to static HTML at build time. Only include pages that
 // render the same content for every visitor (no auth, no per-user data).
@@ -49,6 +102,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    interviewManifestPlugin(),
     ...(skipPrerender
       ? []
       : [
@@ -134,8 +188,11 @@ server: {
           if (id.includes('/module/student/django/data'))      return 'learn-data-django';
           if (id.includes('/module/student/flask/data'))          return 'learn-data-flask';
           if (id.includes('/module/student/fastapi/data'))        return 'learn-data-fastapi';
-          if (id.includes('/module/student/interview-prep/data')) return 'learn-data-interview';
           if (id.includes('/module/student/blockchain/data'))     return 'learn-data-blockchain';
+          // interview-prep is deliberately absent: its data/index.ts loads each
+          // lesson file via import.meta.glob, so Rollup already gives every
+          // section its own chunk. Naming one here would merge all 18 back into
+          // a single 2 MB chunk and undo the per-section loading.
         },
       },
     },
