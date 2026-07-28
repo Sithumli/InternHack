@@ -31,6 +31,7 @@ export class AptitudeController {
   async submitAnswer(req: Request, res: Response, next: NextFunction) {
     try {
       const questionId = parseInt(req.params.id as string);
+      if (isNaN(questionId)) return res.status(400).json({ error: "Invalid question ID" });
       const studentId = req.user!.id;
       const { answer } = req.body;
       if (!answer) return res.status(400).json({ error: "Answer is required" });

@@ -1353,7 +1353,9 @@ Return ONLY a JSON array with exactly ${testCases.length} items in the same orde
   async getDailyProblem(userId?: number) {
     const today = new Date().toISOString().slice(0, 10);
 
-    const problems = await prisma.dsaProblem.findMany();
+    const problems = await prisma.dsaProblem.findMany({
+      orderBy: { id: "asc" },
+    });
 
     if (!problems.length) {
       throw new Error("No DSA problems found");
