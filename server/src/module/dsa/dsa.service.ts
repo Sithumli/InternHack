@@ -388,7 +388,6 @@ export class DsaService {
       createdAt: b.createdAt,
     }));
   }
-
   // ── Custom problem labels (tagging) ──
 
   async addLabel(studentId: number, problemId: number, rawLabel: string) {
@@ -852,8 +851,52 @@ export class DsaService {
     studentId?: number,
     page = 1,
     limit = 50,
+    search?: string,
+    difficulty?: string,
+    topic?: string,
+    company?: string,
+    status?: string
   ) {
-    const where = { sheets: { has: list } };
+    const where: Record<string, any> = {};
+
+    // Support 'all' to browse everything across sheets
+    if (list && list.toLowerCase() !== "all") {
+      where.sheets = { has: list };
+    }
+
+    if (search) {
+      where.title = { contains: search, mode: "insensitive" };
+    }
+
+    if (difficulty && difficulty !== "All") {
+      where.difficulty = difficulty;
+    }
+
+    if (topic && topic !== "All") {
+      where.tags = { has: topic };
+    }
+
+    if (company && company !== "All") {
+      where.companies = { has: company };
+    }
+
+    if (studentId && status && status !== "All") {
+      if (status === "Solved" || status === "Unsolved") {
+        const progress = await prisma.studentDsaProgress.findMany({
+          where: { studentId, solved: true },
+          select: { problemId: true },
+        });
+        const solvedIds = progress.map((p) => p.problemId);
+        where.id = status === "Solved" ? { in: solvedIds } : { notIn: solvedIds };
+      } else if (status === "Bookmarked") {
+        const bookmarks = await prisma.dsaBookmark.findMany({
+          where: { studentId },
+          select: { problemId: true },
+        });
+        const bookmarkedIds = bookmarks.map((b) => b.problemId);
+        where.id = { in: bookmarkedIds };
+      }
+    }
 
     const [problems, total] = await Promise.all([
       prisma.dsaProblem.findMany({
@@ -1426,8 +1469,7 @@ Return ONLY a JSON array with exactly ${testCases.length} items in the same orde
         currentStreak++;
       } else {
         break;
-      }
-    }
+      }    }
 
     const allDays = [...uniqueDays].sort();
     for (let i = 0; i < allDays.length; i++) {
