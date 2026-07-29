@@ -110,22 +110,26 @@ describe('JobMatchingService - Scoring & Ranking', () => {
       
       const newJob = { ...baseJob, createdAt: new Date(now) };
       const threeDaysOld = { ...baseJob, createdAt: new Date(now - 3 * 24 * 3600000) };
+      const sevenDaysOld = { ...baseJob, createdAt: new Date(now - 7 * 24 * 3600000) };
       const twoWeeksOld = { ...baseJob, createdAt: new Date(now - 14 * 24 * 3600000) };
 
       const scoreNew = service.computeMatch(basePref, newJob, 0.5).score;
       const scoreMid = service.computeMatch(basePref, threeDaysOld, 0.5).score;
+      const scoreSeven = service.computeMatch(basePref, sevenDaysOld, 0.5).score;
       const scoreOld = service.computeMatch(basePref, twoWeeksOld, 0.5).score;
 
       expect(scoreNew).toBeGreaterThan(scoreMid);
-      expect(scoreMid).toBeGreaterThan(scoreOld);
+      expect(scoreMid).toBeGreaterThan(scoreSeven);
       
-      // After 7 days, freshness boost should hit 0, capping the decay
+      // After exactly 7 days, freshness boost should hit 0, capping the decay. 
+      // 7-day old job should perfectly equal the 14-day and 30-day old jobs.
+      expect(scoreSeven).toBe(scoreOld);
       expect(scoreOld).toBe(service.computeMatch(basePref, { ...baseJob, createdAt: new Date(now - 30 * 24 * 3600000) }, 0.5).score);
     });
   });
 
   describe('Deterministic Ordering', () => {
-    it('ranks jobs accurately based on combined weighted scores', () => {
+    it('ranks jobs accurately based on combined weighted scores and tie-breakers', () => {
       const pref = {
         desiredSkills: ['Python', 'Django'],
         profileSkills: ['AWS'],
@@ -150,6 +154,11 @@ describe('JobMatchingService - Scoring & Ranking', () => {
         {
           job: { ...baseJob, id: 3, skills: ['Java', 'Spring'], location: 'Bangalore', workMode: 'ONSITE', salaryMin: 120000, salaryMax: 150000, createdAt: new Date() },
           vectorSimilarity: 0.20
+        },
+        // Job D: Exact tie with Job C in terms of score inputs to test the tie-breaker
+        {
+          job: { ...baseJob, id: 4, skills: ['Java', 'Spring'], location: 'Bangalore', workMode: 'ONSITE', salaryMin: 120000, salaryMax: 150000, createdAt: new Date() },
+          vectorSimilarity: 0.20
         }
       ];
 
@@ -158,13 +167,17 @@ describe('JobMatchingService - Scoring & Ranking', () => {
         ...service.computeMatch(pref, j.job, j.vectorSimilarity)
       }));
 
-      // Sort descending by score
-      scored.sort((a, b) => b.score - a.score);
+      // Sort descending by score, tie-break by ID descending
+      scored.sort((a, b) => b.score - a.score || b.id - a.id);
 
-      // Expect Order: 1 (Perfect), 2 (Good vector, bad hard filters), 3 (Bad vector/skills)
+      // Expect Order: 1 (Perfect), 2 (Good vector), 4 (Tie-breaker ID desc), 3 (Tie-breaker ID desc)
       expect(scored[0].id).toBe(1);
       expect(scored[1].id).toBe(2);
-      expect(scored[2].id).toBe(3);
+      expect(scored[2].id).toBe(4);
+      expect(scored[3].id).toBe(3);
+
+      // Verify the tied scores are exactly equal
+      expect(scored[2].score).toBe(scored[3].score);
 
       // Job 1 should have perfect component scores
       expect(scored[0].skillMatch).toBe(1.0);
@@ -172,7 +185,7 @@ describe('JobMatchingService - Scoring & Ranking', () => {
       expect(scored[0].salaryMatch).toBe(1.0);
       expect(scored[0].score).toBeGreaterThan(0.9);
       
-      // Job 3 should have zero skill match
+      // Job 3 & 4 should have zero skill match
       expect(scored[2].skillMatch).toBe(0.0);
     });
   });
