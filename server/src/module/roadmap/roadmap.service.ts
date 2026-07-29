@@ -9,6 +9,49 @@ import type { PlanTier } from "../../config/usage-limits.js";
 const ROADMAP_STRUCTURE_TTL = 300; // 5 minutes
 const ROADMAP_LIST_TTL = 300; // 5 minutes
 
+export interface PublishedRoadmapsResponse {
+  roadmaps: {
+    id: number;
+    slug: string;
+    title: string;
+    shortDescription: string;
+    level: string;
+    estimatedHours: number;
+    coverImage: string | null;
+    ogImage: string | null;
+    topicCount: number;
+    enrolledCount: number;
+    tags: string[];
+    updatedAt: Date;
+    isAiGenerated: boolean;
+    ownerUserId: number | null;
+  }[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export type CommunityRoadmapsResponse = {
+  id: number;
+  slug: string;
+  title: string;
+  shortDescription: string;
+  level: string;
+  estimatedHours: number;
+  coverImage: string | null;
+  ogImage: string | null;
+  topicCount: number;
+  enrolledCount: number;
+  tags: string[];
+  updatedAt: Date;
+  isAiGenerated: boolean;
+  ownerUserId: number | null;
+  creatorName: string | null;
+}[];
+
 function stableKey(obj: Record<string, unknown>): string {
   return JSON.stringify(Object.fromEntries(Object.entries(obj).sort(([a], [b]) => a.localeCompare(b))));
 }
@@ -164,10 +207,10 @@ export async function listPublishedRoadmaps(
     userId?: number | undefined;
   },
   tier: PlanTier = "FREE"
-) {
+): Promise<PublishedRoadmapsResponse> {
   const cacheKey = `roadmaps:list:${tier}:${stableKey(opts as unknown as Record<string, unknown>)}`;
-  const cached = await cacheGet(cacheKey);
-  if (cached) return cached as never;
+  const cached = await cacheGet<PublishedRoadmapsResponse>(cacheKey);
+  if (cached) return cached;
 
   // Build the visibility condition: public roadmaps + caller's own unpublished ones
   const visibilityCondition: Prisma.roadmapWhereInput = opts.userId
@@ -234,7 +277,7 @@ export async function listPublishedRoadmaps(
     prisma.roadmap.count({ where }),
   ]);
 
-  const result = {
+  const result: PublishedRoadmapsResponse = {
     roadmaps,
     pagination: {
       page: opts.page,
@@ -248,10 +291,10 @@ export async function listPublishedRoadmaps(
   return result;
 }
 
-export async function listCommunityRoadmaps(limit = 24, tier: PlanTier = "FREE") {
+export async function listCommunityRoadmaps(limit = 24, tier: PlanTier = "FREE"): Promise<CommunityRoadmapsResponse> {
   const cacheKey = `roadmaps:community:${tier}:${limit}`;
-  const cached = await cacheGet(cacheKey);
-  if (cached) return cached as never;
+  const cached = await cacheGet<CommunityRoadmapsResponse>(cacheKey);
+  if (cached) return cached;
 
   const rows = await prisma.roadmap.findMany({
     where: { isPubliclyShared: true, isAiGenerated: true },
@@ -276,7 +319,7 @@ export async function listCommunityRoadmaps(limit = 24, tier: PlanTier = "FREE")
     },
   });
   
-  const result = rows.map(({ owner, ...r }) => ({
+  const result: CommunityRoadmapsResponse = rows.map(({ owner, ...r }) => ({
     ...r,
     creatorName: owner?.name ?? null,
   }));

@@ -7,11 +7,51 @@ import type { PlanTier } from "../../config/usage-limits.js";
 const prefKey = (id: number) => `job-pref:${id}`;
 const FEED_TTL = 300; // 5 minutes TTL for feed data
 
+export interface JobFeedResponse {
+  matches: {
+    matchId: number;
+    score: number;
+    skillMatch: number;
+    locationMatch: number;
+    salaryMatch: number;
+    saved: boolean;
+    seen: boolean;
+    job: {
+      id: number;
+      title: string;
+      company: string;
+      location: string;
+      salary: string | null;
+      skills: string[];
+      workMode: string | null;
+      experienceLevel: string | null;
+      applicationUrl: string | null;
+      tags: string[];
+      domain: string | null;
+      createdAt: Date;
+    };
+  }[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+async function invalidateFeedCache(userId: number) {
+  await Promise.all(
+    ["FREE", "PREMIUM"].map((tier) =>
+      cacheDelPattern(`job-feed:list:${tier}:${userId}:`),
+    ),
+  );
+}
+
 export class JobFeedService {
   async getFeed(userId: number, page = 1, limit = 10, tier: PlanTier = "FREE") {
     const cacheKey = `job-feed:list:${tier}:${userId}:${page}:${limit}`;
-    const cached = await cacheGet(cacheKey);
-    if (cached) return cached as never;
+    const cached = await cacheGet<JobFeedResponse>(cacheKey);
+    if (cached) return cached;
 
     const skip = (page - 1) * limit;
 
@@ -26,7 +66,7 @@ export class JobFeedService {
       prisma.jobMatch.count({ where: { userId, dismissed: false } }),
     ]);
 
-    const result = {
+    const result: JobFeedResponse = {
       matches: matches.map((m: any) => ({
         matchId: m.id,
         score: Math.round(m.score * 100),
@@ -77,7 +117,7 @@ export class JobFeedService {
     });
 
     // Invalidate the feed cache so the dismissed job disappears immediately
-    await cacheDelPattern(`job-feed:list:*:${userId}:*`);
+    await invalidateFeedCache(userId);
   }
 
   async save(userId: number, matchId: number) {
@@ -87,7 +127,7 @@ export class JobFeedService {
     });
     
     // Invalidate caches
-    await cacheDelPattern(`job-feed:list:*:${userId}:*`);
+    await invalidateFeedCache(userId);
   }
 
   async markSeen(userId: number, matchId: number) {
@@ -97,7 +137,7 @@ export class JobFeedService {
     });
     
     // Invalidate caches
-    await cacheDelPattern(`job-feed:list:*:${userId}:*`);
+    await invalidateFeedCache(userId);
   }
 
   async getSaved(userId: number) {
@@ -157,7 +197,7 @@ export class JobFeedService {
 
     await cacheDel(prefKey(userId));
     // Also clear the feed cache because their new preferences will change their matches
-    await cacheDelPattern(`job-feed:list:*:${userId}:*`);
+    await invalidateFeedCache(userId);
     
     return pref;
   }
