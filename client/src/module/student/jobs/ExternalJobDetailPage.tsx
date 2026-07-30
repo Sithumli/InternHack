@@ -131,13 +131,14 @@ export default function ExternalJobDetailPage() {
       <SEO
         title={`${job.role || "Job"} at ${job.company || "Company"}`}
         description={job.description?.slice(0, 160) || ""}
-        canonicalUrl={canonicalUrl(`/jobs/${job.slug || job.id}`)}
+        canonicalUrl={canonicalUrl(`/jobs/ext/${job.slug || job.id}`)}
         structuredData={[
           jobPostingSchema({
             title: job.role || "Job",
             description: job.description || "",
             company: job.company || "Company",
             location: job.location || "Remote",
+            url: canonicalUrl(`/jobs/ext/${job.slug || job.id}`),
             salary: job.salary || undefined,
             deadline: job.expiresAt || null,
             createdAt: job.createdAt,
@@ -146,7 +147,7 @@ export default function ExternalJobDetailPage() {
           breadcrumbSchema([
             { name: "Home", url: SITE_URL },
             { name: "Jobs", url: `${SITE_URL}/jobs` },
-            { name: job.role || "Job", url: `${SITE_URL}/jobs/${job.slug || job.id}` },
+            { name: job.role || "Job", url: `${SITE_URL}/jobs/ext/${job.slug || job.id}` },
           ]),
         ]}
       />

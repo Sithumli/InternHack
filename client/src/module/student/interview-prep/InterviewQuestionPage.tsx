@@ -15,7 +15,8 @@ import type { InterviewQuestion } from "./data/types";
 
 import { SEO } from "../../../components/SEO";
 import { CodeBlock } from "../../../components/ui/CodeBlock";
-import { canonicalUrl } from "../../../lib/seo.utils";
+import { canonicalUrl, SITE_URL } from "../../../lib/seo.utils";
+import { qaPageSchema, breadcrumbSchema } from "../../../lib/structured-data";
 import { useAuthStore } from "../../../lib/auth.store";
 import { reportMilestone } from "../../../lib/milestone.utils";
 import api from "../../../lib/axios";
@@ -309,6 +310,25 @@ export default function InterviewQuestionPage() {
         title={`${question.title} - Interview Question`}
         description={content.answer?.slice(0, 160) || `Detailed answer for "${question.title}" interview question with code examples.`}
         canonicalUrl={canonicalUrl(`/learn/interview/${sectionSlug}/${questionId}`)}
+        ogType="article"
+        structuredData={[
+          qaPageSchema({
+            title: question.title,
+            question: content.question,
+            answer: content.answer,
+            url: canonicalUrl(`/learn/interview/${sectionSlug}/${questionId}`),
+            concepts: question.concepts,
+          }),
+          breadcrumbSchema([
+            { name: "Learn", url: `${SITE_URL}/learn` },
+            { name: "Interview Prep", url: `${SITE_URL}/learn/interview` },
+            { name: section.title, url: `${SITE_URL}/learn/interview/${sectionSlug}` },
+            {
+              name: question.title,
+              url: canonicalUrl(`/learn/interview/${sectionSlug}/${questionId}`),
+            },
+          ]),
+        ]}
       />
 
       <GridBackground />

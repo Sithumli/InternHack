@@ -298,6 +298,14 @@ function App() {
             <Route path="/internships" element={<GovInternshipsPage />} />
             <Route path="/external-jobs" element={<ScrapedJobsPage />} />
             <Route path="/external-jobs/:id" element={<ScrapedJobDetailPage />} />
+            {/* /jobs has long been advertised as the public job board by llms.txt,
+                the WebSite SearchAction, the noscript block and the sitemap, but no
+                such route existed, so all of it resolved to the 404 page. The public
+                listing lives at /external-jobs (it owns the /:id detail pages), so
+                point /jobs there instead of duplicating it. /jobs/t/:slug covers the
+                programmatic landing slugs that were submitted but never built. */}
+            <Route path="/jobs" element={<Navigate to="/external-jobs" replace />} />
+            <Route path="/jobs/t/:slug" element={<Navigate to="/external-jobs" replace />} />
             <Route path="/companies" element={<CompanyListOrRedirect />} />
             <Route path="/companies/:slug" element={<CompanyDetailOrRedirect />} />
             <Route path="/yc/:slug" element={<YCCompanyOrRedirect />} />

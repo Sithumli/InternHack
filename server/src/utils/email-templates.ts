@@ -1899,6 +1899,11 @@ export function internshipDocsEmailHtml(args: {
   signatoryName: string;
   signatoryTitle: string;
   signatoryEmail: string;
+  /**
+   * Optional notice shown above the greeting. Used when the documents are a
+   * corrected reissue, so the recipient knows to discard the earlier PDFs.
+   */
+  notice?: string;
 }): string {
   const firstName = escapeHtml(args.internName.split(" ")[0] || args.internName);
   const role = escapeHtml(args.role);
@@ -1906,6 +1911,14 @@ export function internshipDocsEmailHtml(args: {
   const signatoryName = escapeHtml(args.signatoryName);
   const signatoryTitle = escapeHtml(args.signatoryTitle);
   const signatoryEmail = escapeHtml(args.signatoryEmail);
+
+  const noticeBlock = args.notice
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+        <tr><td style="border-left:3px solid #a3e635;background-color:#fafaf9;padding:14px 16px;">
+          <p style="margin:0;font-size:14px;line-height:1.65;color:#3f3f46;">${escapeHtml(args.notice)}</p>
+        </td></tr>
+      </table>`
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1916,6 +1929,7 @@ export function internshipDocsEmailHtml(args: {
       <h1 style="margin:0;font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">InternHack</h1>
     </td></tr>
     <tr><td style="padding:28px 24px;">
+      ${noticeBlock}
       <h2 style="margin:0 0 6px;font-size:22px;font-weight:700;color:#18181b;">Your internship certificate, ${firstName}</h2>
       <p style="margin:0 0 18px;font-size:15px;line-height:1.7;color:#3f3f46;">
         Congratulations on completing your internship at InternHack as a <strong>${role}</strong>, ${term}.

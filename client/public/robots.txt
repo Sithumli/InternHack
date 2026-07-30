@@ -55,4 +55,5 @@ Crawl-delay: 10
 User-agent: AhrefsBot
 Crawl-delay: 10
 
+# Sitemap index. Children: pages, companies, content, jobs, learn.
 Sitemap: https://www.internhack.xyz/sitemap.xml

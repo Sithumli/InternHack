@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config'
+import type { Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import prerender from '@prerenderer/rollup-plugin'
@@ -57,6 +58,127 @@ function interviewManifestPlugin() {
   }
 }
 
+// Every lesson and interview question is a public, indexable page, but the
+// content lives in JSON under src/, so the server that serves /sitemap.xml
+// cannot see it. This plugin walks the same lesson files at build time and
+// emits sitemap-learn.xml as a static asset, which the sitemap index on the
+// API then points at. Derived on every build, so it tracks the JSON exactly.
+const SITE_URL = 'https://www.internhack.xyz'
+const STUDENT_DIR = path.resolve(__dirname, 'src/module/student')
+
+// Content directory name -> /learn/<segment>. Only these have lesson JSON laid
+// out as data/lessons/<sectionId>.json with an array of { id }.
+const LEARN_SEGMENTS: Record<string, string> = {
+  javascript: 'javascript',
+  typescript: 'typescript',
+  react: 'react',
+  python: 'python',
+  nodejs: 'nodejs',
+  html: 'html',
+  css: 'css',
+  django: 'django',
+  flask: 'flask',
+  fastapi: 'fastapi',
+  blockchain: 'blockchain',
+  'data-analytics': 'data-analytics',
+  'interview-prep': 'interview',
+}
+
+interface LearnEntry { loc: string; priority: string }
+
+function collectLearnUrls(): LearnEntry[] {
+  const entries: LearnEntry[] = []
+  for (const [dir, segment] of Object.entries(LEARN_SEGMENTS)) {
+    const lessonsDir = path.join(STUDENT_DIR, dir, 'data/lessons')
+    if (!fs.existsSync(lessonsDir)) continue
+
+    // Only section and lesson URLs here. The /learn/<segment> hubs are owned by
+    // the pages section of the server sitemap; emitting them in both would list
+    // the same URL in two children of the index.
+    for (const file of fs.readdirSync(lessonsDir).filter((f) => f.endsWith('.json'))) {
+      const sectionId = file.replace(/\.json$/, '')
+      entries.push({ loc: `${SITE_URL}/learn/${segment}/${sectionId}`, priority: '0.7' })
+
+      let items: { id?: string }[]
+      try {
+        items = JSON.parse(fs.readFileSync(path.join(lessonsDir, file), 'utf8'))
+      } catch {
+        continue
+      }
+      if (!Array.isArray(items)) continue
+
+      for (const item of items) {
+        if (!item?.id) continue
+        entries.push({
+          loc: `${SITE_URL}/learn/${segment}/${sectionId}/${item.id}`,
+          priority: '0.6',
+        })
+      }
+    }
+  }
+  return entries
+}
+
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+function learnSitemapPlugin(): Plugin {
+  // The shell as Vite finishes it: hashed asset tags injected, #root still empty.
+  // Captured here because by the time the build is on disk, the prerender plugin
+  // has replaced dist/index.html with the fully rendered homepage, which is
+  // useless as a template for the lesson pages.
+  let pristineShell: string | null = null
+
+  return {
+    name: 'learn-sitemap',
+    apply: 'build' as const,
+    transformIndexHtml: {
+      order: 'post' as const,
+      handler(html: string) {
+        pristineShell = html
+        return html
+      },
+    },
+    // closeBundle runs after dist/ has been written, so this is a plain write
+    // rather than an emitted asset. scripts/generate-seo-pages.mjs consumes it
+    // and deletes it, so it never ships.
+    closeBundle() {
+      if (pristineShell === null) {
+        console.warn('[learn-sitemap] never saw index.html, no pristine SEO shell written')
+        return
+      }
+      const out = path.resolve(__dirname, 'dist/seo-shell.html')
+      fs.writeFileSync(out, pristineShell, 'utf8')
+    },
+    generateBundle() {
+      const urls = collectLearnUrls()
+      const body = urls
+        .map(
+          (u) =>
+            `  <url>\n    <loc>${escapeXml(u.loc)}</loc>\n` +
+            `    <changefreq>monthly</changefreq>\n` +
+            `    <priority>${u.priority}</priority>\n  </url>`,
+        )
+        .join('\n')
+      this.emitFile({
+        type: 'asset',
+        fileName: 'sitemap-learn.xml',
+        source:
+          '<?xml version="1.0" encoding="UTF-8"?>\n' +
+          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+          `${body}\n</urlset>\n`,
+      })
+      console.log(`[learn-sitemap] emitted sitemap-learn.xml with ${urls.length} URLs`)
+    },
+  }
+}
+
 // Routes to prerender to static HTML at build time. Only include pages that
 // render the same content for every visitor (no auth, no per-user data).
 const PRERENDER_ROUTES = [
@@ -67,6 +189,15 @@ const PRERENDER_ROUTES = [
   '/terms',
   '/privacy',
   '/refund',
+  '/contact',
+  '/external-jobs',
+  '/internships',
+  '/companies',
+  '/roadmaps',
+  '/opensource',
+  '/grants',
+  '/ats-score',
+  '/contributors',
   '/learn',
   '/learn/javascript',
   '/learn/python',
@@ -94,8 +225,13 @@ const PRERENDER_ROUTES = [
 // so puppeteer can't launch and the prerender plugin hard-fails the build.
 // Skip the plugin on Vercel and rely on local prerendering (or skip SEO snapshot
 // for that deploy). Override via SKIP_PRERENDER=1 to disable elsewhere.
-const skipPrerender = true // Temporarily disabled due to Puppeteer connection timeout
-  // process.env.SKIP_PRERENDER === '1' || process.env.VERCEL === '1'
+//
+// This only covers the app-shell routes below. The ~1,400 lesson and interview
+// pages are handled by scripts/generate-seo-pages.mjs instead, which templates
+// their HTML straight from the lesson JSON with no browser, so they get real
+// crawlable content on every build including on Vercel.
+const skipPrerender =
+  process.env.SKIP_PRERENDER === '1' || process.env.VERCEL === '1'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -103,6 +239,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     interviewManifestPlugin(),
+    learnSitemapPlugin(),
     ...(skipPrerender
       ? []
       : [
