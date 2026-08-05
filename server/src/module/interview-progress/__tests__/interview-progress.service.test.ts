@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, type Mocked } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { InterviewProgressService } from '../interview-progress.service.js';
 import { prisma } from '../../../database/db.js';
 
@@ -17,7 +17,6 @@ vi.mock('../../../database/db.js', () => ({
 
 describe('InterviewProgressService', () => {
   let service: InterviewProgressService;
-  const mockedPrisma = prisma as unknown as Mocked<typeof prisma>;
 
   beforeEach(() => {
     service = new InterviewProgressService();
@@ -26,8 +25,8 @@ describe('InterviewProgressService', () => {
 
   describe('getProgress & aggregateProgress', () => {
     it('returns EMPTY_PROGRESS when no records exist', async () => {
-      mockedPrisma.userInterviewQuestionState.findMany.mockResolvedValue([]);
-      mockedPrisma.userInterviewProgress.findUnique.mockResolvedValue(null);
+      vi.mocked(prisma.userInterviewQuestionState.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.userInterviewProgress.findUnique).mockResolvedValue(null);
 
       const result = await service.getProgress(1);
 
@@ -37,7 +36,7 @@ describe('InterviewProgressService', () => {
         lastVisitedId: null,
         lastVisitedAt: null,
       });
-      expect(mockedPrisma.userInterviewQuestionState.findMany).toHaveBeenCalledWith({
+      expect(vi.mocked(prisma.userInterviewQuestionState.findMany)).toHaveBeenCalledWith({
         where: { userId: 1 },
         select: { questionId: true, isCompleted: true, isBookmarked: true },
       });
@@ -46,13 +45,13 @@ describe('InterviewProgressService', () => {
     it('correctly aggregates completed, bookmarked, and visited states', async () => {
       const mockDate = new Date('2026-07-30T00:00:00Z');
       
-      mockedPrisma.userInterviewQuestionState.findMany.mockResolvedValue([
+      vi.mocked(prisma.userInterviewQuestionState.findMany).mockResolvedValue([
         { questionId: 'q1', isCompleted: true, isBookmarked: false },
         { questionId: 'q2', isCompleted: false, isBookmarked: true },
         { questionId: 'q3', isCompleted: true, isBookmarked: true },
       ] as any);
 
-      mockedPrisma.userInterviewProgress.findUnique.mockResolvedValue({
+      vi.mocked(prisma.userInterviewProgress.findUnique).mockResolvedValue({
         lastVisitedId: 'q2',
         lastVisitedAt: mockDate,
       } as any);
@@ -69,14 +68,14 @@ describe('InterviewProgressService', () => {
   describe('updateProgress state transitions', () => {
     beforeEach(() => {
       // Setup default mock return for the aggregateProgress call at the end of updateProgress
-      mockedPrisma.userInterviewQuestionState.findMany.mockResolvedValue([]);
-      mockedPrisma.userInterviewProgress.findUnique.mockResolvedValue(null);
+      vi.mocked(prisma.userInterviewQuestionState.findMany).mockResolvedValue([]);
+      vi.mocked(prisma.userInterviewProgress.findUnique).mockResolvedValue(null);
     });
 
     it('idempotently handles "complete" action', async () => {
       await service.updateProgress(1, 'q_test', 'complete');
 
-      expect(mockedPrisma.userInterviewQuestionState.upsert).toHaveBeenCalledWith({
+      expect(vi.mocked(prisma.userInterviewQuestionState.upsert)).toHaveBeenCalledWith({
         where: { userId_questionId: { userId: 1, questionId: 'q_test' } },
         update: { isCompleted: true },
         create: { userId: 1, questionId: 'q_test', isCompleted: true },
@@ -86,7 +85,7 @@ describe('InterviewProgressService', () => {
     it('idempotently handles "uncomplete" action', async () => {
       await service.updateProgress(1, 'q_test', 'uncomplete');
 
-      expect(mockedPrisma.userInterviewQuestionState.upsert).toHaveBeenCalledWith({
+      expect(vi.mocked(prisma.userInterviewQuestionState.upsert)).toHaveBeenCalledWith({
         where: { userId_questionId: { userId: 1, questionId: 'q_test' } },
         update: { isCompleted: false },
         create: { userId: 1, questionId: 'q_test', isCompleted: false },
@@ -96,7 +95,7 @@ describe('InterviewProgressService', () => {
     it('idempotently handles "bookmark" action', async () => {
       await service.updateProgress(1, 'q_test', 'bookmark');
 
-      expect(mockedPrisma.userInterviewQuestionState.upsert).toHaveBeenCalledWith({
+      expect(vi.mocked(prisma.userInterviewQuestionState.upsert)).toHaveBeenCalledWith({
         where: { userId_questionId: { userId: 1, questionId: 'q_test' } },
         update: { isBookmarked: true },
         create: { userId: 1, questionId: 'q_test', isBookmarked: true },
@@ -106,7 +105,7 @@ describe('InterviewProgressService', () => {
     it('idempotently handles "unbookmark" action', async () => {
       await service.updateProgress(1, 'q_test', 'unbookmark');
 
-      expect(mockedPrisma.userInterviewQuestionState.upsert).toHaveBeenCalledWith({
+      expect(vi.mocked(prisma.userInterviewQuestionState.upsert)).toHaveBeenCalledWith({
         where: { userId_questionId: { userId: 1, questionId: 'q_test' } },
         update: { isBookmarked: false },
         create: { userId: 1, questionId: 'q_test', isBookmarked: false },
@@ -116,13 +115,13 @@ describe('InterviewProgressService', () => {
     it('handles "visit" action by updating global progress', async () => {
       await service.updateProgress(1, 'q_visit', 'visit');
 
-      expect(mockedPrisma.userInterviewProgress.upsert).toHaveBeenCalledWith({
+      expect(vi.mocked(prisma.userInterviewProgress.upsert)).toHaveBeenCalledWith({
         where: { userId: 1 },
         update: { lastVisitedId: 'q_visit', lastVisitedAt: expect.any(Date) },
         create: { userId: 1, lastVisitedId: 'q_visit', lastVisitedAt: expect.any(Date) },
       });
       // Ensure question state upsert was NOT called for a visit
-      expect(mockedPrisma.userInterviewQuestionState.upsert).not.toHaveBeenCalled();
+      expect(vi.mocked(prisma.userInterviewQuestionState.upsert)).not.toHaveBeenCalled();
     });
   });
 });
