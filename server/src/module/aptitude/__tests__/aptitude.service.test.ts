@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi, type Mocked } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AptitudeService } from '../aptitude.service.js';
 import { prisma } from '../../../database/db.js';
 import * as difficultyHelpers from '../aptitude.difficulty.js';
@@ -28,7 +28,6 @@ vi.mock('../aptitude.difficulty.js', () => ({
 
 describe('AptitudeService - Scoring & Progress', () => {
   let service: AptitudeService;
-  const mockedPrisma = prisma as unknown as Mocked<typeof prisma>;
 
   beforeEach(() => {
     service = new AptitudeService();
@@ -45,8 +44,8 @@ describe('AptitudeService - Scoring & Progress', () => {
     const THREE_DAYS_AGO = new Date(TODAY.getTime() - 86400000 * 3);
 
     it('handles a fresh user with 0 questions attempted', async () => {
-      mockedPrisma.aptitudeQuestion.count.mockResolvedValue(100);
-      mockedPrisma.studentAptitudeProgress.findMany.mockResolvedValue([]);
+      vi.mocked(prisma.aptitudeQuestion.count).mockResolvedValue(100);
+      vi.mocked(prisma.studentAptitudeProgress.findMany).mockResolvedValue([]);
 
       const result = await service.getProgress(1);
 
@@ -57,8 +56,8 @@ describe('AptitudeService - Scoring & Progress', () => {
     });
 
     it('computes correct totals for all correct answers', async () => {
-      mockedPrisma.aptitudeQuestion.count.mockResolvedValue(100);
-      mockedPrisma.studentAptitudeProgress.findMany.mockResolvedValue([
+      vi.mocked(prisma.aptitudeQuestion.count).mockResolvedValue(100);
+      vi.mocked(prisma.studentAptitudeProgress.findMany).mockResolvedValue([
         { correct: true, lastPracticedAt: TODAY },
         { correct: true, lastPracticedAt: TODAY },
       ] as any);
@@ -70,8 +69,8 @@ describe('AptitudeService - Scoring & Progress', () => {
     });
 
     it('computes correct totals for all incorrect answers', async () => {
-      mockedPrisma.aptitudeQuestion.count.mockResolvedValue(100);
-      mockedPrisma.studentAptitudeProgress.findMany.mockResolvedValue([
+      vi.mocked(prisma.aptitudeQuestion.count).mockResolvedValue(100);
+      vi.mocked(prisma.studentAptitudeProgress.findMany).mockResolvedValue([
         { correct: false, lastPracticedAt: TODAY },
         { correct: false, lastPracticedAt: TODAY },
       ] as any);
@@ -83,8 +82,8 @@ describe('AptitudeService - Scoring & Progress', () => {
     });
 
     it('calculates streak correctly if practiced today, yesterday, and two days ago', async () => {
-      mockedPrisma.aptitudeQuestion.count.mockResolvedValue(100);
-      mockedPrisma.studentAptitudeProgress.findMany.mockResolvedValue([
+      vi.mocked(prisma.aptitudeQuestion.count).mockResolvedValue(100);
+      vi.mocked(prisma.studentAptitudeProgress.findMany).mockResolvedValue([
         { correct: true, lastPracticedAt: TODAY },
         { correct: false, lastPracticedAt: YESTERDAY },
         { correct: true, lastPracticedAt: TWO_DAYS_AGO },
@@ -97,8 +96,8 @@ describe('AptitudeService - Scoring & Progress', () => {
     });
 
     it('streak falls back to 0 if yesterday and today were missed', async () => {
-      mockedPrisma.aptitudeQuestion.count.mockResolvedValue(100);
-      mockedPrisma.studentAptitudeProgress.findMany.mockResolvedValue([
+      vi.mocked(prisma.aptitudeQuestion.count).mockResolvedValue(100);
+      vi.mocked(prisma.studentAptitudeProgress.findMany).mockResolvedValue([
         { correct: true, lastPracticedAt: TWO_DAYS_AGO },
         { correct: true, lastPracticedAt: THREE_DAYS_AGO },
       ] as any);
@@ -112,13 +111,13 @@ describe('AptitudeService - Scoring & Progress', () => {
 
   describe('submitAnswer (Progress Upsert semantics)', () => {
     it('throws if question does not exist', async () => {
-      mockedPrisma.aptitudeQuestion.findUnique.mockResolvedValue(null);
+      vi.mocked(prisma.aptitudeQuestion.findUnique).mockResolvedValue(null);
       await expect(service.submitAnswer(1, 999, 'A')).rejects.toThrow('Question not found');
     });
 
     it('upserts best/latest score correctly for a correct answer', async () => {
       // 1. Setup mock question
-      mockedPrisma.aptitudeQuestion.findUnique.mockResolvedValue({
+      vi.mocked(prisma.aptitudeQuestion.findUnique).mockResolvedValue({
         id: 10,
         topicId: 5,
         correctAnswer: 'C',
@@ -126,7 +125,7 @@ describe('AptitudeService - Scoring & Progress', () => {
       } as any);
 
       // 2. Setup mock topic state (previous difficulty)
-      mockedPrisma.studentAptitudeTopicProgress.findUnique.mockResolvedValue({
+      vi.mocked(prisma.studentAptitudeTopicProgress.findUnique).mockResolvedValue({
         currentDifficulty: 'MEDIUM'
       } as any);
 
@@ -146,7 +145,7 @@ describe('AptitudeService - Scoring & Progress', () => {
       expect(result.currentDifficulty).toBe('HARD');
 
       // Verify Upserts: Should set correct: true
-      expect(mockedPrisma.studentAptitudeProgress.upsert).toHaveBeenCalledWith(
+      expect(vi.mocked(prisma.studentAptitudeProgress.upsert)).toHaveBeenCalledWith(
         expect.objectContaining({
           create: expect.objectContaining({ answered: true, correct: true }),
           update: expect.objectContaining({ answered: true, correct: true }),
@@ -154,7 +153,7 @@ describe('AptitudeService - Scoring & Progress', () => {
       );
 
       // Verify Topic difficulty upserted
-      expect(mockedPrisma.studentAptitudeTopicProgress.upsert).toHaveBeenCalledWith(
+      expect(vi.mocked(prisma.studentAptitudeTopicProgress.upsert)).toHaveBeenCalledWith(
         expect.objectContaining({
           create: expect.objectContaining({ currentDifficulty: 'HARD' }),
           update: expect.objectContaining({ currentDifficulty: 'HARD' }),
@@ -163,14 +162,14 @@ describe('AptitudeService - Scoring & Progress', () => {
     });
 
     it('upserts correctly for an incorrect answer', async () => {
-      mockedPrisma.aptitudeQuestion.findUnique.mockResolvedValue({
+      vi.mocked(prisma.aptitudeQuestion.findUnique).mockResolvedValue({
         id: 10,
         topicId: 5,
         correctAnswer: 'A',
         explanation: 'Because A is correct',
       } as any);
 
-      mockedPrisma.studentAptitudeTopicProgress.findUnique.mockResolvedValue({
+      vi.mocked(prisma.studentAptitudeTopicProgress.findUnique).mockResolvedValue({
         currentDifficulty: 'HARD'
       } as any);
 
@@ -185,7 +184,7 @@ describe('AptitudeService - Scoring & Progress', () => {
       expect(result.correctAnswer).toBe('A');
 
       // Verify Upserts: Should set correct: false
-      expect(mockedPrisma.studentAptitudeProgress.upsert).toHaveBeenCalledWith(
+      expect(vi.mocked(prisma.studentAptitudeProgress.upsert)).toHaveBeenCalledWith(
         expect.objectContaining({
           create: expect.objectContaining({ answered: true, correct: false }),
           update: expect.objectContaining({ answered: true, correct: false }),
