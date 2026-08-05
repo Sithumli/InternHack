@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../../database/db.js";
 import { getProviderForService } from "../../lib/ai-provider-registry.js";
 import { logAIRequest } from "../../lib/ai-request-logger.js";
@@ -857,7 +858,8 @@ export class DsaService {
     company?: string,
     status?: string
   ) {
-    const where: Record<string, any> = {};
+    // 1. Strictly type the where clause using the generated Prisma input type
+    const where: Prisma.dsaProblemWhereInput = {};
 
     // Support 'all' to browse everything across sheets
     if (list && list.toLowerCase() !== "all") {
@@ -880,7 +882,18 @@ export class DsaService {
       where.companies = { has: company };
     }
 
-    if (studentId && status && status !== "All") {
+    // 2. Safely and strictly validate the status filter independently
+    if (status && status !== "All") {
+      const validStatuses = ["Solved", "Unsolved", "Bookmarked"];
+      if (!validStatuses.includes(status)) {
+        throw Object.assign(new Error("Invalid status filter"), { status: 400 });
+      }
+      
+      // 3. Ensure an unauthenticated user is completely blocked from using personal filters
+      if (!studentId) {
+        throw Object.assign(new Error("Authentication required to filter by status"), { status: 401 });
+      }
+
       if (status === "Solved" || status === "Unsolved") {
         const progress = await prisma.studentDsaProgress.findMany({
           where: { studentId, solved: true },
