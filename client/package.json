@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npx puppeteer browsers install chrome && vite build",
+    "build": "npx puppeteer browsers install chrome && vite build && node scripts/generate-seo-pages.mjs",
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "preview": "vite preview",
@@ -58,7 +58,6 @@
     "react-syntax-highlighter": "^16.1.1",
     "react-to-print": "^3.3.0",
     "react-tooltip": "^6.0.7",
-    "reactflow": "^11.11.4",
     "recharts": "^3.8.1",
     "rehype-highlight": "^7.0.2",
     "rehype-raw": "^7.0.0",

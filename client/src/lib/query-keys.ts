@@ -164,6 +164,14 @@ export const queryKeys = {
   jobAgent: {
     conversation: () => ["job-agent", "conversation"] as const,
   },
+  applicationTracker: {
+    list: (params?: Record<string, string | number | boolean | undefined>) =>
+      ["application-tracker", "list", params] as const,
+    stats: () => ["application-tracker", "stats"] as const,
+  },
+  extension: {
+    session: () => ["extension", "session"] as const,
+  },
 
   // Interview Experiences
   interviews: {
@@ -206,20 +214,12 @@ export const queryKeys = {
       ["dsa", "company", name, page] as const,
     companyTrackStats: (name: string) =>
       ["dsa", "company", name, "track-stats"] as const,
-    patterns: () => ["dsa", "patterns"] as const,
-    pattern: (name: string, page?: number) =>
-      ["dsa", "pattern", name, page] as const,
     sheets: () => ["dsa", "sheets"] as const,
-    lists: () => ["dsa", "lists"] as const,
-    list: (name: string, page?: number) => ["dsa", "list", name, page] as const,
     submissions: (problemId: number) =>
       ["dsa", "submissions", problemId] as const,
     testCases: (problemId: number) =>
       ["dsa", "testcases", problemId] as const,
-    importStatus: () => ["dsa", "import-status"] as const,
-    streak: () => ["dsa", "streak"] as const,
     activity: (year: number) => ["dsa", "activity", year] as const,
-    analytics: () => ["dsa", "analytics"] as const,
     similar: (id: number) => ["dsa", "similar", id] as const,
     approaches: (slug: string) => ["dsa", "approaches", slug] as const,
   },

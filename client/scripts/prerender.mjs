@@ -22,18 +22,19 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST = join(__dirname, "..", "dist");
 
 // ── Static public routes to prerender ───────────────────────────────
+// Only routes that actually exist. /jobs, /blog and /for-recruiters used to be
+// listed here but were never defined in App.tsx, so they prerendered the 404 page.
 const STATIC_ROUTES = [
   "/",
-  "/jobs",
   "/companies",
-  "/blog",
   "/learn",
   "/ats-score",
   "/grants",
   "/opensource",
-  "/for-recruiters",
+  "/roadmaps",
   "/internships",
   "/external-jobs",
+  "/contributors",
   "/login",
   "/register",
   "/terms",

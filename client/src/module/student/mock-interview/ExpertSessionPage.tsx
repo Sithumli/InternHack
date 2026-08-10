@@ -11,7 +11,6 @@ import {
   CheckCircle,
   Calendar,
   Clock,
-  Sparkle,
   IndianRupee,
   Check,
 } from "lucide-react";
@@ -19,6 +18,7 @@ import { SEO } from "../../../components/SEO";
 import api from "../../../lib/axios";
 import { Button } from "../../../components/ui/button";
 import { Textarea } from "../../../components/ui/textarea";
+import { useAuthStore } from "../../../lib/auth.store";
 import { queryKeys } from "../../../lib/query-keys";
 
 type Step = "prep" | "slot" | "review" | "confirmed";
@@ -28,9 +28,19 @@ const FOCUS_AREA_OPTIONS = [
   "System Design",
   "Frontend",
   "Backend",
+  "Full Stack",
+  "DevOps",
+  "Cloud",
+  "Mobile",
+  "Data Analytics",
+  "Data Science",
+  "Machine Learning",
   "Behavioral",
   "Resume Review",
 ];
+
+// Server caps focusAreas at 10 (expert-session.validation.ts).
+const MAX_FOCUS_AREAS = 10;
 
 const EXPERIENCE_LEVELS = [
   { value: "STUDENT", label: "Student, no experience" },
@@ -85,12 +95,42 @@ export default function ExpertSessionPage() {
   const [experienceLevel, setExperienceLevel] = useState<string>("");
   const [focusAreas, setFocusAreas] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
+  const [recordingConsent, setRecordingConsent] = useState(true);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const [failedNotice, setFailedNotice] = useState(false);
+  const [confirmTimeout, setConfirmTimeout] = useState(false);
+  const [contactInput, setContactInput] = useState("");
   const dodoInitialized = useRef(false);
   const bookingIdRef = useRef<number | null>(null);
+
+  const authUser = useAuthStore((s) => s.user);
+  const setAuthUser = useAuthStore((s) => s.setUser);
+  // The expert coordinates over WhatsApp, so capture the student's number at
+  // booking if it isn't on their profile yet, persist it (PUT /auth/me), and
+  // let confirmBooking forward it to the expert. Blank is allowed so it never
+  // blocks a payment.
+  const hasContact = !!authUser?.contactNo?.trim();
+
+  const persistContactIfNeeded = async (): Promise<boolean> => {
+    if (hasContact) return true;
+    const val = contactInput.trim();
+    if (!val) return true;
+    const normalized = val.replace(/[\s-]/g, "");
+    if (!/^\+\d{11,13}$/.test(normalized)) {
+      toast.error("Phone must include country code (e.g. +91 9876543210)");
+      return false;
+    }
+    try {
+      const res = await api.put("/auth/me", { contactNo: val });
+      if (authUser) setAuthUser({ ...authUser, contactNo: res.data.user.contactNo });
+      return true;
+    } catch {
+      toast.error("Could not save your number. Please try again.");
+      return false;
+    }
+  };
 
   const { data: slots, isLoading: loadingSlots } = useQuery({
     queryKey: queryKeys.expertSession.availableSlots(),
@@ -145,7 +185,13 @@ export default function ExpertSessionPage() {
           // ignore transient polling errors
         }
       }
+      // Webhook confirmation didn't land within the poll window. The payment did
+      // go through (we only poll after checkout.status === "succeeded"), so surface
+      // a "finalizing" notice with a manual recheck instead of silently dropping
+      // the user back onto the pay screen as if nothing happened.
       setPaying(false);
+      setConfirmTimeout(true);
+      queryClient.invalidateQueries({ queryKey: queryKeys.expertSession.mySessions() });
     },
     [queryClient],
   );
@@ -162,8 +208,13 @@ export default function ExpertSessionPage() {
         if (event.event_type === "checkout.status") {
           const status = (event.data?.message as { status?: string })?.status;
           if (status === "succeeded" && bookingIdRef.current) {
+            // Dismiss the Dodo overlay ourselves — this flow confirms in-app by
+            // polling (no return_url redirect), so nothing else closes it. Without
+            // this, the "Session booked!" step renders behind a stuck overlay.
+            DodoPayments.Checkout.close();
             void pollStatus(bookingIdRef.current);
           } else if (status === "failed") {
+            DodoPayments.Checkout.close();
             setPaying(false);
             setFailedNotice(true);
           }
@@ -190,12 +241,14 @@ export default function ExpertSessionPage() {
         experienceLevel: experienceLevel || undefined,
         focusAreas,
         notes: notes.trim() || undefined,
+        recordingConsent,
       });
       return res.data as { checkoutUrl: string; expertSessionId: number };
     },
     onSuccess: (data) => {
       bookingIdRef.current = data.expertSessionId;
       setFailedNotice(false);
+      setConfirmTimeout(false);
       setPaying(true);
       DodoPayments.Checkout.open({ checkoutUrl: data.checkoutUrl });
     },
@@ -208,7 +261,15 @@ export default function ExpertSessionPage() {
   const canProceedFromPrep = experienceLevel !== "" && focusAreas.length > 0;
 
   const toggleFocusArea = (area: string) => {
-    setFocusAreas((prev) => (prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]));
+    if (focusAreas.includes(area)) {
+      setFocusAreas((prev) => prev.filter((a) => a !== area));
+      return;
+    }
+    if (focusAreas.length >= MAX_FOCUS_AREAS) {
+      toast.error(`Pick up to ${MAX_FOCUS_AREAS} focus areas`);
+      return;
+    }
+    setFocusAreas((prev) => [...prev, area]);
   };
 
   const stepIndex = STEPS.findIndex((s) => s.id === step);
@@ -347,6 +408,18 @@ export default function ExpertSessionPage() {
                   />
                 </div>
 
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={recordingConsent}
+                    onChange={(e) => setRecordingConsent(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-lime-400 cursor-pointer"
+                  />
+                  <span className="text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
+                    I agree to record my interview so that others can watch and improve it.
+                  </span>
+                </label>
+
                 <div className="flex justify-end pt-2">
                   <Button
                     variant="primary"
@@ -484,9 +557,41 @@ export default function ExpertSessionPage() {
                     </p>
                   </div>
 
+                  {!hasContact && (
+                    <div className="space-y-1.5 rounded-md border border-stone-200 dark:border-white/10 p-4">
+                      <label className="block text-[10px] font-mono uppercase tracking-widest text-stone-400">
+                        Your WhatsApp number (optional)
+                      </label>
+                      <input
+                        type="tel"
+                        value={contactInput}
+                        onChange={(e) => setContactInput(e.target.value)}
+                        placeholder="+91 9876543210"
+                        className="w-full text-sm rounded-md border border-stone-300 dark:border-white/15 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-lime-400"
+                      />
+                      <p className="text-[11px] text-stone-400 dark:text-stone-500">
+                        Shared with your interviewer so they can reach you on WhatsApp to coordinate the session.
+                      </p>
+                    </div>
+                  )}
+
+                  {paying && (
+                    <div className="rounded-md border border-lime-200 bg-lime-50 px-4 py-3 text-xs text-lime-700 dark:border-lime-400/30 dark:bg-lime-400/10 dark:text-lime-300 flex items-center gap-2">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                      Confirming your payment. This only takes a few seconds.
+                    </div>
+                  )}
+
                   {failedNotice && (
                     <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300">
                       Payment did not complete. You can try again below.
+                    </div>
+                  )}
+
+                  {confirmTimeout && (
+                    <div className="rounded-md border border-stone-200 bg-stone-50 px-4 py-3 text-xs text-stone-600 dark:border-white/10 dark:bg-white/5 dark:text-stone-300">
+                      Payment received. We're finalizing your booking, this can take a moment. It will
+                      appear under Your sessions shortly, so there's no need to pay again.
                     </div>
                   )}
 
@@ -510,11 +615,25 @@ export default function ExpertSessionPage() {
                     <Button
                       variant="primary"
                       disabled={paying || checkoutMutation.isPending}
-                      onClick={() => checkoutMutation.mutate()}
+                      onClick={
+                        confirmTimeout
+                          ? () => {
+                              if (!bookingIdRef.current) return;
+                              setConfirmTimeout(false);
+                              setPaying(true);
+                              void pollStatus(bookingIdRef.current);
+                            }
+                          : async () => {
+                              if (!(await persistContactIfNeeded())) return;
+                              checkoutMutation.mutate();
+                            }
+                      }
                       className="bg-lime-400 text-stone-950 hover:bg-lime-300 disabled:opacity-60"
                     >
                       {paying || checkoutMutation.isPending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : confirmTimeout ? (
+                        "Check booking status"
                       ) : (
                         <>
                           <IndianRupee className="w-3.5 h-3.5" />
@@ -559,7 +678,7 @@ export default function ExpertSessionPage() {
           {mySessions && mySessions.length > 0 && step !== "confirmed" && (
             <div className="mt-8">
               <span className="text-xs font-mono uppercase tracking-widest text-stone-400 flex items-center gap-1.5 mb-3">
-                <Sparkle className="w-3 h-3" />
+                <Clock className="w-3 h-3" />
                 Your sessions
               </span>
               <div className="space-y-2">

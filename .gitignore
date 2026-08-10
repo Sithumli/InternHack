@@ -28,3 +28,11 @@ REPO_MAP.md
 nul
 .vercel
 .env*
+
+# Locally generated PDFs / scratch output
+server/tmp/
+
+# Scanned signature (personal, never commit). Read by the internship
+# certificate / LOR generators from server/assets at runtime.
+server/assets/signature-*.png
+*-removebg-preview.png

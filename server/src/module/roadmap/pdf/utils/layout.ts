@@ -91,9 +91,24 @@ export function drawCallout(
   const padBottom = 10;
   const innerW = contentW - padX * 2;
 
+  // Inline header: "BUILD  Mini project". The label is measured rather than
+  // boxed to a fixed width, so a long label pushes the title along instead of
+  // wrapping one word per line underneath it.
+  const labelText = args.label.toUpperCase();
+  const labelOpts = { characterSpacing: 1.6, lineBreak: false } as const;
+  const labelGap = 10;
+
+  doc.fontSize(8).font("Helvetica-Bold");
+  const labelW = doc.widthOfString(labelText, labelOpts);
+  const titleX = MARGIN + padX + labelW + labelGap;
+  const titleW = Math.max(60, innerW - labelW - labelGap);
+
+  doc.fontSize(10).font("Helvetica-Bold");
+  const titleH = doc.heightOfString(args.title, { width: titleW });
+
   doc.fontSize(9).font("Helvetica");
   const bodyH = doc.heightOfString(args.body, { width: innerW, lineGap: 1.5 });
-  const headerH = 12; // single-line label + title combined
+  const headerH = Math.max(12, titleH);
   const blockH = padTop + headerH + 4 + bodyH + padBottom;
 
   pageBreakIfNeeded(doc, blockH + 4);
@@ -101,15 +116,11 @@ export function drawCallout(
   const startY = doc.y;
   doc.rect(MARGIN, startY, contentW, blockH).fillAndStroke(tone.bg, tone.border);
 
-  // Inline header: "BUILD  Mini project"
+  // Nudge the smaller label down so it sits on the title's baseline.
   doc.fillColor(tone.ink).fontSize(8).font("Helvetica-Bold");
-  doc.text(args.label.toUpperCase(), MARGIN + padX, startY + padTop, {
-    characterSpacing: 1.6,
-    width: 60,
-    continued: true,
-  });
+  doc.text(labelText, MARGIN + padX, startY + padTop + 2, labelOpts);
   doc.fillColor(colors.ink).fontSize(10).font("Helvetica-Bold");
-  doc.text(`   ${args.title}`, { width: innerW - 60 });
+  doc.text(args.title, titleX, startY + padTop, { width: titleW });
 
   doc.fillColor(colors.body).fontSize(9).font("Helvetica");
   doc.text(args.body, MARGIN + padX, startY + padTop + headerH + 4, {
@@ -133,24 +144,27 @@ export function stampFooters(doc: PDFKit.PDFDocument, colors: ColorsType) {
     doc.rect(MARGIN, y, A4_WIDTH - MARGIN * 2, 0.5).fill(colors.faintest);
 
     doc.fillColor(colors.faint).fontSize(8).font("Helvetica");
-    doc.text("INTERNHACK · ROADMAP", MARGIN, y + 8, {
-      characterSpacing: 1.5,
-      width: (A4_WIDTH - MARGIN * 2) / 2,
-      lineBreak: false,
-    });
-    doc.text(
-      `Page ${i - range.start + 1} of ${total}`,
-      MARGIN,
-      y + 8,
-      { width: A4_WIDTH - MARGIN * 2, align: "right", lineBreak: false },
-    );
+
+    // No `width` option here: it engages pdfkit's line wrapper, which appends a
+    // fresh page for any text positioned below the bottom margin (the footer
+    // always is). Place the right-hand label by measuring it instead.
+    const leftOpts = { characterSpacing: 1.5, lineBreak: false } as const;
+    doc.text("INTERNHACK · ROADMAP", MARGIN, y + 8, leftOpts);
+
+    const pageLabel = `Page ${i - range.start + 1} of ${total}`;
+    const labelWidth = doc.widthOfString(pageLabel, { lineBreak: false });
+    doc.text(pageLabel, A4_WIDTH - MARGIN - labelWidth, y + 8, { lineBreak: false });
   }
 }
 
+/**
+ * Five-step difficulty meter. Helvetica's WinAnsi encoding has no star glyph
+ * (★ and ☆ both render as the same mojibake), so this uses bullet and middle
+ * dot, which it does have.
+ */
 export function stars(n: number): string {
-  const filled = "★".repeat(Math.max(0, Math.min(5, n)));
-  const empty = "☆".repeat(5 - Math.max(0, Math.min(5, n)));
-  return filled + empty;
+  const filled = Math.max(0, Math.min(5, n));
+  return "•".repeat(filled) + "·".repeat(5 - filled);
 }
 
 export function difficultyLabel(n: number): string {

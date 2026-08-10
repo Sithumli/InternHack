@@ -10,11 +10,13 @@ import {
   ArrowUpRight,
   MessageSquare,
 } from "lucide-react";
-import { sections, questions } from "./data";
+import { sections, loadSectionQuestions } from "./data";
+import type { InterviewQuestion } from "./data/types";
 
 import { SEO } from "../../../components/SEO";
 import { CodeBlock } from "../../../components/ui/CodeBlock";
-import { canonicalUrl } from "../../../lib/seo.utils";
+import { canonicalUrl, SITE_URL } from "../../../lib/seo.utils";
+import { qaPageSchema, breadcrumbSchema } from "../../../lib/structured-data";
 import { useAuthStore } from "../../../lib/auth.store";
 import { reportMilestone } from "../../../lib/milestone.utils";
 import api from "../../../lib/axios";
@@ -83,7 +85,34 @@ export default function InterviewQuestionPage() {
   const [completed, setCompleted] = useState(false);
 
   const section = useMemo( () => sections.find((s) => s.id === sectionSlug) || null, [sectionSlug]);
-  const sectionQuestions = useMemo(() => { return questions.filter((q) => q.sectionId === sectionSlug).sort((a, b) => a.orderIndex - b.orderIndex);}, [sectionSlug]);
+
+  // Keyed by slug rather than a separate loading flag, so switching sections can
+  // never show the previous section's questions, and the "not found" branch
+  // below can tell "still fetching" apart from "fetched and genuinely absent".
+  const [loaded, setLoaded] = useState<{ slug: string; questions: InterviewQuestion[] } | null>(null);
+
+  useEffect(() => {
+    if (!sectionSlug) return;
+    let active = true;
+    loadSectionQuestions(sectionSlug)
+      .then((questions) => {
+        if (active) setLoaded({ slug: sectionSlug, questions });
+      })
+      .catch((err) => {
+        console.error("Failed to load interview questions", err);
+        if (active) setLoaded({ slug: sectionSlug, questions: [] });
+      });
+    return () => {
+      active = false;
+    };
+  }, [sectionSlug]);
+
+  const sectionQuestions = useMemo(
+    () => (loaded && loaded.slug === sectionSlug ? loaded.questions : []),
+    [loaded, sectionSlug],
+  );
+  const questionsLoading = Boolean(sectionSlug) && loaded?.slug !== sectionSlug;
+
   const question = useMemo(() => { return sectionQuestions.find((q) => q.id === questionId) || null;}, [sectionQuestions, questionId]);
 
   const currentIndex = question
@@ -213,6 +242,19 @@ export default function InterviewQuestionPage() {
     return <Navigate to={basePath} replace />;
   }
 
+  if (questionsLoading && !question) {
+    return (
+      <div className="relative max-w-3xl mx-auto py-24 px-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-3 w-32 bg-stone-200 dark:bg-stone-800 rounded-sm" />
+          <div className="h-8 w-3/4 bg-stone-200 dark:bg-stone-800 rounded-md" />
+          <div className="h-4 w-full bg-stone-100 dark:bg-stone-800/60 rounded-sm" />
+          <div className="h-4 w-5/6 bg-stone-100 dark:bg-stone-800/60 rounded-sm" />
+        </div>
+      </div>
+    );
+  }
+
   if (!question || !section) {
   return (
     <div className="relative max-w-3xl mx-auto py-24 px-6 text-center">
@@ -268,6 +310,25 @@ export default function InterviewQuestionPage() {
         title={`${question.title} - Interview Question`}
         description={content.answer?.slice(0, 160) || `Detailed answer for "${question.title}" interview question with code examples.`}
         canonicalUrl={canonicalUrl(`/learn/interview/${sectionSlug}/${questionId}`)}
+        ogType="article"
+        structuredData={[
+          qaPageSchema({
+            title: question.title,
+            question: content.question,
+            answer: content.answer,
+            url: canonicalUrl(`/learn/interview/${sectionSlug}/${questionId}`),
+            concepts: question.concepts,
+          }),
+          breadcrumbSchema([
+            { name: "Learn", url: `${SITE_URL}/learn` },
+            { name: "Interview Prep", url: `${SITE_URL}/learn/interview` },
+            { name: section.title, url: `${SITE_URL}/learn/interview/${sectionSlug}` },
+            {
+              name: question.title,
+              url: canonicalUrl(`/learn/interview/${sectionSlug}/${questionId}`),
+            },
+          ]),
+        ]}
       />
 
       <GridBackground />

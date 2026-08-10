@@ -2,7 +2,7 @@ import { motion, AnimatePresence, useAnimation, useMotionValue, useReducedMotion
 import { Link } from "react-router";
 import { useEffect, useCallback, useState, useRef } from "react";
 import NumberFlow from "@number-flow/react";
-import { ArrowRight, Play, Star } from "lucide-react";
+import { ArrowRight, Play, Star, PlugZap } from "lucide-react";
 import { useAuthStore } from "@/lib/auth.store";
 
 const ROTATING_WORDS = ["offer.", "internship.", "interview.", "callback.", "dream job."];
@@ -125,18 +125,28 @@ function HeroGeometric() {
           className="mt-10 flex flex-col sm:flex-row gap-3 justify-center items-center"
         >
           <Link to={getStartedHref} className="no-underline">
-            <button className="group inline-flex items-center gap-2 px-6 py-3.5 bg-lime-400 text-stone-950 rounded-lg text-sm font-bold hover:bg-lime-300 transition-colors cursor-pointer border-0">
+            <button type="button" className="group inline-flex items-center gap-2 px-6 py-3.5 bg-lime-400 text-stone-950 rounded-lg text-sm font-bold hover:bg-lime-300 transition-colors cursor-pointer border-0">
               {isAuthenticated ? "Open dashboard" : "Start free"}
               <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
             </button>
           </Link>
           <a href="#demo" className="no-underline">
-            <button className="inline-flex items-center gap-2 px-6 py-3.5 rounded-lg text-sm font-semibold text-stone-900 dark:text-stone-100 bg-transparent border border-stone-300 dark:border-white/15 hover:bg-stone-100 dark:hover:bg-white/5 transition-colors cursor-pointer">
+            <button type="button" className="inline-flex items-center gap-2 px-6 py-3.5 rounded-lg text-sm font-semibold text-stone-900 dark:text-stone-100 bg-transparent border border-stone-300 dark:border-white/15 hover:bg-stone-100 dark:hover:bg-white/5 transition-colors cursor-pointer">
               <Play className="w-4 h-4 fill-current" />
               Watch 90s demo
             </button>
           </a>
         </motion.div>
+
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.32 }}
+          className="mt-6 inline-flex items-center gap-2 text-xs md:text-sm text-stone-600 dark:text-stone-400"
+        >
+          <PlugZap className="w-4 h-4 text-lime-500" />
+          Plus a free browser extension that autofills applications on Greenhouse, Lever, Workday and more.
+        </motion.p>
 
         <motion.div
           initial={{ opacity: 0 }}

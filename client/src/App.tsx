@@ -9,16 +9,21 @@ import { LoadingScreen } from "./components/LoadingScreen";
 import BackToTopButton from "./components/common/BackToTopButton";
 import ScrollProgressBar from "./components/common/ScrollProgressBar";
 import ScrollToTop from "./components/common/ScrollToTop";
-const ContributorsPage = lazyWithRetry(() => import("./module/contributors/ContributorsPage"));
-
-let hasReloaded = false;
+// Declared before the first lazyWithRetry() call below. `lazyWithRetry` is a
+// hoisted function declaration, but this is a const, so a call site above this
+// line would hit the temporal dead zone and throw during module evaluation.
+const RETRY_KEY_PREFIX = "lazy-retry:";
 
 function lazyWithRetry<T extends ComponentType<unknown>>(factory: () => Promise<{ default: T }>): LazyExoticComponent<T> {
   return lazy(
     () =>
       factory().catch((err: unknown) => {
-        if (!hasReloaded) {
-          hasReloaded = true;
+        // Built here rather than in the function body so nothing is read at
+        // module-init time, and so factory.toString() only runs on a failure
+        // instead of once per lazy route on every page load.
+        const retryKey = RETRY_KEY_PREFIX + factory.toString();
+        if (!sessionStorage.getItem(retryKey)) {
+          sessionStorage.setItem(retryKey, "1");
           window.location.reload();
           return new Promise<never>(() => { });
         }
@@ -26,6 +31,8 @@ function lazyWithRetry<T extends ComponentType<unknown>>(factory: () => Promise<
       }) as Promise<{ default: T }>,
   ) as LazyExoticComponent<T>;
 }
+
+const ContributorsPage = lazyWithRetry(() => import("./module/contributors/ContributorsPage"));
 
 // Public pages
 const LandingPage = lazyWithRetry(() => import("./module/LandingPage/landingPage"));
@@ -42,17 +49,12 @@ const PublicAtsTryPage = lazyWithRetry(() => import("./module/student/ats/Public
 const GrantsPage = lazyWithRetry(() => import("./module/student/grants/GrantsPage"));
 const PublicOpenSourcePage = lazyWithRetry(() => import("./module/student/opensource/PublicOpenSourcePage"));
 const RepoPublicPage = lazyWithRetry(() => import("./module/student/opensource/RepoPublicPage"));
-const BlogListPage = lazyWithRetry(() => import("./module/blog/BlogListPage"));
-const BlogPostPage = lazyWithRetry(() => import("./module/blog/BlogPostPage"));
 const AptitudeCategoriesPage = lazyWithRetry(() => import("./module/student/aptitude/AptitudeCategoriesPage"));
 const AptitudeTopicPage = lazyWithRetry(() => import("./module/student/aptitude/AptitudeTopicPage"));
 const AptitudeCompaniesPage = lazyWithRetry(() => import("./module/student/aptitude/AptitudeCompaniesPage"));
 const DsaTopicsPage = lazyWithRetry(() => import("./module/student/dsa/DsaTopicsPage"));
-const DsaAnalyticsPage = lazyWithRetry(() => import("./module/student/dsa/DsaAnalyticsPage"));
 const DsaTopicDetailPage = lazyWithRetry(() => import("./module/student/dsa/DsaTopicDetailPage"));
 const DsaCompaniesPage = lazyWithRetry(() => import("./module/student/dsa/DsaCompaniesPage"));
-const DsaPatternsPage = lazyWithRetry(() => import("./module/student/dsa/DsaPatternsPage"));
-const DsaListsPage = lazyWithRetry(() => import("./module/student/dsa/DsaListsPage"));
 const DsaBookmarksPage = lazyWithRetry(() => import("./module/student/dsa/DsaBookmarksPage"));
 const DsaProblemDetailPage = lazyWithRetry(() => import("./module/student/dsa/DsaProblemDetailPage"));
 const DsaFoundationsHubPage = lazyWithRetry(() => import("./module/student/learn/dsa-foundations/DsaFoundationsHubPage"));
@@ -62,6 +64,8 @@ const PlacementPrepPlansPage = lazyWithRetry(() => import("./module/student/lear
 const SystemDesignHubPage = lazyWithRetry(() => import("./module/student/learn/system-design/SystemDesignHubPage"));
 const SystemDesignLevelPage = lazyWithRetry(() => import("./module/student/learn/system-design/SystemDesignLevelPage"));
 const SystemDesignLessonPage = lazyWithRetry(() => import("./module/student/learn/system-design/SystemDesignLessonPage"));
+const ComputerNetworksHubPage = lazyWithRetry(() => import("./module/student/learn/computer-networks/ComputerNetworksHubPage"));
+const ComputerNetworksModulePage = lazyWithRetry(() => import("./module/student/learn/computer-networks/ComputerNetworksModulePage"));
 const YCCompanyDetailPage = lazyWithRetry(() => import("./module/student/companies/YCCompanyDetailPage"));
 const JobBrowsePage = lazyWithRetry(() => import("./module/student/jobs/JobBrowsePage"));
 const GovInternshipsPage = lazyWithRetry(() => import("./module/student/jobs/GovInternshipsPage"));
@@ -76,7 +80,6 @@ const TermsPage = lazyWithRetry(() => import("./module/legal/TermsPage"));
 const PrivacyPage = lazyWithRetry(() => import("./module/legal/PrivacyPage"));
 const ShippingPage = lazyWithRetry(() => import("./module/legal/ShippingPage"));
 const ContactPage = lazyWithRetry(() => import("./module/legal/ContactPage"));
-const AboutPage = lazyWithRetry(() => import("./module/legal/AboutPage"));
 const RefundPage = lazyWithRetry(() => import("./module/legal/RefundPage"));
 
 // Student pages
@@ -295,6 +298,14 @@ function App() {
             <Route path="/internships" element={<GovInternshipsPage />} />
             <Route path="/external-jobs" element={<ScrapedJobsPage />} />
             <Route path="/external-jobs/:id" element={<ScrapedJobDetailPage />} />
+            {/* /jobs has long been advertised as the public job board by llms.txt,
+                the WebSite SearchAction, the noscript block and the sitemap, but no
+                such route existed, so all of it resolved to the 404 page. The public
+                listing lives at /external-jobs (it owns the /:id detail pages), so
+                point /jobs there instead of duplicating it. /jobs/t/:slug covers the
+                programmatic landing slugs that were submitted but never built. */}
+            <Route path="/jobs" element={<Navigate to="/external-jobs" replace />} />
+            <Route path="/jobs/t/:slug" element={<Navigate to="/external-jobs" replace />} />
             <Route path="/companies" element={<CompanyListOrRedirect />} />
             <Route path="/companies/:slug" element={<CompanyDetailOrRedirect />} />
             <Route path="/yc/:slug" element={<YCCompanyOrRedirect />} />
@@ -319,15 +330,12 @@ function App() {
             <Route path="/learn/roadmaps/certificates/:slug/:shareToken" element={<RoadmapCertificatePage />}/>
             <Route path="/learn/roadmaps/certificates" element={<ProtectedRoute role="STUDENT"><RoadmapCertificatesGalleryPage /></ProtectedRoute>}/>
             <Route path="/learn/roadmaps/:slug/:topicSlug" element={<ProtectedRoute role="STUDENT"><RoadmapTopicPage /></ProtectedRoute>} />
-            <Route path="/blog" element={<BlogListPage />} />
             <Route path="/contributors" element={<ContributorsPage />} />
-            <Route path="/blog/:slug" element={<BlogPostPage />} />
             {/* Legal Pages */}
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/shipping" element={<ShippingPage />} />
             <Route path="/contact" element={<ContactPage />} />
-            <Route path="/about" element={<AboutPage />} />
             <Route path="/refund" element={<RefundPage />} />
             {/* Learning Hub - all learning content under /learn */}
             <Route path="/learn" element={<LearnLayout />}>
@@ -368,10 +376,7 @@ function App() {
               <Route path="sql/:sectionSlug" element={<SqlExercisePage />} />
               <Route path="sql/:sectionSlug/:exerciseId" element={<SqlExercisePage />} />
               <Route path="dsa" element={<DsaTopicsPage />} />
-              <Route path="dsa/analytics" element={<ProtectedRoute role="STUDENT"><DsaAnalyticsPage /></ProtectedRoute>} />
               <Route path="dsa/companies" element={<DsaCompaniesPage />} />
-              <Route path="dsa/patterns" element={<DsaPatternsPage />} />
-              <Route path="dsa/lists" element={<DsaListsPage />} />
               <Route path="dsa/bookmarks" element={<ProtectedRoute role="STUDENT"><DsaBookmarksPage /></ProtectedRoute>} />
               <Route path="dsa/problem" element={<Navigate to="/learn/dsa" replace />} />
               <Route path="dsa/problem/:slug" element={<DsaProblemDetailPage />} />
@@ -383,6 +388,8 @@ function App() {
               <Route path="system-design" element={<SystemDesignHubPage />} />
               <Route path="system-design/:levelId" element={<SystemDesignLevelPage />} />
               <Route path="system-design/:levelId/:lessonSlug" element={<SystemDesignLessonPage />} />
+              <Route path="computer-networks" element={<ComputerNetworksHubPage />} />
+              <Route path="computer-networks/:moduleId" element={<ComputerNetworksModulePage />} />
               <Route path="aptitude" element={<AptitudeCategoriesPage />} />
               <Route path="aptitude/companies" element={<AptitudeCompaniesPage />} />
               <Route path="aptitude/verbal-ability" element={<VerbalAbilityPage />} />
@@ -450,6 +457,7 @@ function App() {
             <Route path="/student" element={<ProtectedRoute role="STUDENT"><StudentLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="applications" replace />} />
               <Route path="jobs" element={<JobBrowsePage />} />
+              <Route path="job-hub" element={<Navigate to="/student/applications" replace />} />
               <Route path="internships" element={<GovInternshipsPage />} />
               <Route path="companies" element={<CompanyListPage />} />
               <Route path="companies/:slug" element={<CompanyDetailPage />} />
@@ -467,7 +475,7 @@ function App() {
               <Route path="mock-interview/expert" element={<ExpertSessionPage />} />
               <Route path="mock-interview/peer" element={<PeerMockInterviewPage />} />
               <Route path="companies/add" element={<AddCompanyPage />} />
-              <Route path="grants" element={<GrantsPage />} />
+              <Route path="grants" element={<Navigate to="/student/applications" replace />} />
               <Route path="opensource" element={<OpenSourceLayout />}>
                 <Route index element={<OpenSourceDashboardPage />} />
                 <Route path="discover" element={<RepoDiscoveryPage />} />
