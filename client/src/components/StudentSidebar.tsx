@@ -22,6 +22,7 @@ import {
   Radar,
 } from "lucide-react";
 import { useAuthStore } from "../lib/auth.store";
+import { Tooltip } from "./ui/tooltip";
 
 type NavItem = {
   to: string;
@@ -176,48 +177,51 @@ export function useStudentSidebar() {
         </div>
 
         {/* Identity + collapse toggle */}
-        <div className={`flex items-center gap-2 border-b border-stone-200 dark:border-white/10 ${collapsed ? "px-3 py-3" : "px-5 py-3"}`}>
-          <Link
-            to="/student/profile"
-            onClick={() => setMobileOpen(false)}
-            title={collapsed ? user?.name : undefined}
-            className={`flex items-center gap-3 no-underline min-w-0 ${collapsed ? "justify-center flex-1" : "flex-1"} hover:opacity-80 transition-opacity`}
-          >
-            {avatar("md")}
-            {!collapsed && (
-              <div className="min-w-0 flex-1">
-                <h2 className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate leading-tight">
-                  {user?.name}
-                </h2>
-                {isPremium && (
-                  <span className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-widest text-amber-500 dark:text-amber-400">
-                    <Crown className="w-2.5 h-2.5 shrink-0" fill="currentColor" />
-                    Premium
-                  </span>
-                )}
-              </div>
-            )}
-          </Link>
-          {!collapsed && (
-            <button
-              onClick={toggleSidebar}
-              title="Collapse sidebar"
-              className="hidden lg:flex shrink-0 p-1.5 rounded-md text-stone-500 hover:text-stone-900 dark:hover:text-stone-50 hover:bg-stone-100 dark:hover:bg-stone-900 transition-colors border-0 bg-transparent cursor-pointer"
+        <div className={`flex items-center gap-2 border-b border-stone-200 dark:border-white/10 h-16 shrink-0 ${collapsed ? "px-3" : "px-5"}`}>
+          <Tooltip content={user?.name} side="right" disabled={!collapsed}>
+            <Link
+              to="/student/profile"
+              onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 no-underline min-w-0 ${collapsed ? "justify-center flex-1" : "flex-1"} hover:opacity-80 transition-opacity`}
             >
-              <ChevronsLeft className="w-4 h-4" />
-            </button>
+              {avatar("md")}
+              {!collapsed && (
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-sm font-bold text-stone-900 dark:text-stone-50 truncate leading-tight">
+                    {user?.name}
+                  </h2>
+                  {isPremium && (
+                    <span className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-widest text-amber-500 dark:text-amber-400">
+                      <Crown className="w-2.5 h-2.5 shrink-0" fill="currentColor" />
+                      Premium
+                    </span>
+                  )}
+                </div>
+              )}
+            </Link>
+          </Tooltip>
+          {!collapsed && (
+            <Tooltip content="Collapse sidebar" side="bottom">
+              <button
+                onClick={toggleSidebar}
+                className="hidden lg:flex shrink-0 p-1.5 rounded-md text-stone-500 hover:text-stone-900 dark:hover:text-stone-50 hover:bg-stone-100 dark:hover:bg-stone-900 transition-colors border-0 bg-transparent cursor-pointer"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </button>
+            </Tooltip>
           )}
         </div>
 
         {collapsed && (
           <div className="hidden lg:flex justify-center py-2 border-b border-stone-200 dark:border-white/10">
-            <button
-              onClick={toggleSidebar}
-              title="Expand sidebar"
-              className="p-1.5 rounded-md text-stone-500 hover:text-stone-900 dark:hover:text-stone-50 hover:bg-stone-100 dark:hover:bg-stone-900 transition-colors border-0 bg-transparent cursor-pointer"
-            >
-              <ChevronsRight className="w-4 h-4" />
-            </button>
+            <Tooltip content="Expand sidebar" side="right">
+              <button
+                onClick={toggleSidebar}
+                className="p-1.5 rounded-md text-stone-500 hover:text-stone-900 dark:hover:text-stone-50 hover:bg-stone-100 dark:hover:bg-stone-900 transition-colors border-0 bg-transparent cursor-pointer"
+              >
+                <ChevronsRight className="w-5.5 h-5.5" />
+              </button>
+            </Tooltip>
           </div>
         )}
 
@@ -237,44 +241,46 @@ export function useStudentSidebar() {
               <ul className="space-y-0.5">
                 {group.items.map((item) => {
                   const isLocked = item.premium && !isPremium;
+                  const itemTooltip = isLocked ? `${item.label} (Pro)` : item.label;
                   return (
                     <li key={item.to}>
-                      <NavLink
-                        to={isLocked ? "/student/checkout" : item.to}
-                        title={collapsed ? (isLocked ? `${item.label} (Pro)` : item.label) : undefined}
-                        onClick={() => setMobileOpen(false)}
-                        className={({ isActive }) =>
-                          `relative flex items-center gap-3 rounded-md text-sm transition-colors no-underline ${
-                            collapsed ? "justify-center px-2 py-2" : "px-3 py-2"
-                          } ${
-                            isActive && !isLocked
-                              ? "bg-stone-900 dark:bg-stone-50 text-stone-50 dark:text-stone-900 font-bold"
-                              : "text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-900 hover:text-stone-900 dark:hover:text-stone-50 font-medium"
-                          }`
-                        }
-                      >
-                        {({ isActive }) => (
-                          <>
-                            {isActive && !isLocked && !collapsed && (
-                              <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 bg-lime-400" />
-                            )}
-                            <item.icon className="w-4 h-4 shrink-0" />
-                            {!collapsed && (
-                              <>
-                                <span className="truncate">{item.label}</span>
-                                {isLocked && (
-                                  <Lock className="w-3 h-3 ml-auto shrink-0 text-stone-400" />
-                                )}
-                                {item.premium && !isLocked && (
-                                  <span className="ml-auto text-[9px] font-mono uppercase tracking-widest text-lime-500">
-                                    pro
-                                  </span>
-                                )}
-                              </>
-                            )}
-                          </>
-                        )}
-                      </NavLink>
+                      <Tooltip content={itemTooltip} side="right" disabled={!collapsed}>
+                        <NavLink
+                          to={isLocked ? "/student/checkout" : item.to}
+                          onClick={() => setMobileOpen(false)}
+                          className={({ isActive }) =>
+                            `relative flex items-center gap-3 rounded-md text-sm transition-colors no-underline ${
+                              collapsed ? "justify-center p-2.5" : "px-3 py-2"
+                            } ${
+                              isActive && !isLocked
+                                ? "bg-stone-900 dark:bg-stone-50 text-stone-50 dark:text-stone-900 font-bold"
+                                : "text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-900 hover:text-stone-900 dark:hover:text-stone-50 font-medium"
+                            }`
+                          }
+                        >
+                          {({ isActive }) => (
+                            <>
+                              {isActive && !isLocked && !collapsed && (
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 bg-lime-400" />
+                              )}
+                              <item.icon className={`${collapsed ? "w-5.5 h-5.5" : "w-4.5 h-4.5"} shrink-0`} />
+                              {!collapsed && (
+                                <>
+                                  <span className="truncate">{item.label}</span>
+                                  {isLocked && (
+                                    <Lock className="w-3.5 h-3.5 ml-auto shrink-0 text-stone-400" />
+                                  )}
+                                  {item.premium && !isLocked && (
+                                    <span className="ml-auto text-[9px] font-mono uppercase tracking-widest text-lime-500">
+                                      pro
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </>
+                          )}
+                        </NavLink>
+                      </Tooltip>
                     </li>
                   );
                 })}
@@ -285,16 +291,17 @@ export function useStudentSidebar() {
 
         {/* Footer: logout */}
         <div className={`border-t border-stone-200 dark:border-white/10 ${collapsed ? "px-2 py-3" : "px-3 py-3"}`}>
-          <button
-            onClick={handleLogout}
-            title={collapsed ? "Logout" : undefined}
-            className={`w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-stone-600 dark:text-stone-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors border-0 bg-transparent cursor-pointer ${
-              collapsed ? "justify-center px-2" : ""
-            }`}
-          >
-            <LogOut className="w-4 h-4 shrink-0" />
-            {!collapsed && <span className="truncate">Logout</span>}
-          </button>
+          <Tooltip content="Logout" side="right" disabled={!collapsed}>
+            <button
+              onClick={handleLogout}
+              className={`w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-stone-600 dark:text-stone-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors border-0 bg-transparent cursor-pointer ${
+                collapsed ? "justify-center p-2.5" : ""
+              }`}
+            >
+              <LogOut className={`${collapsed ? "w-5.5 h-5.5" : "w-4.5 h-4.5"} shrink-0`} />
+              {!collapsed && <span className="truncate">Logout</span>}
+            </button>
+          </Tooltip>
         </div>
       </aside>
     </>

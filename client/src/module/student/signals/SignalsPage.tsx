@@ -12,7 +12,10 @@ import {
   ArrowUpRight,
   Briefcase,
   AlertCircle,
+  Filter,
+  ArrowUpDown,
 } from "lucide-react";
+import { EditorialDropdown } from "../../../components/ui/EditorialDropdown";
 import { SEO } from "../../../components/SEO";
 import { Button } from "../../../components/ui/button";
 import { queryKeys } from "../../../lib/query-keys";
@@ -162,43 +165,39 @@ export default function SignalsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <label htmlFor="signals-source" className="sr-only">
-            Filter by source
-          </label>
-          <select
-            id="signals-source"
+          <EditorialDropdown
+            icon={<Filter className="w-3.5 h-3.5" />}
+            label="Source"
             value={source}
-            onChange={(e) => {
-              setSource(e.target.value);
+            options={[
+              { value: "", label: "All sources" },
+              { value: "yc-launches", label: "YC Launches" },
+              { value: "techcrunch", label: "TechCrunch" },
+              { value: "hn-hiring", label: "HN Hiring" },
+              { value: "exa-funding", label: "Funding News" },
+              { value: "manual", label: "Manual" },
+            ]}
+            onChange={(val) => {
+              setSource(val);
               setPage(1);
             }}
-            className="px-3 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-white/10 rounded-md text-sm text-stone-900 dark:text-stone-50 focus:outline-none focus:border-lime-400 transition-colors"
-          >
-            <option value="">All sources</option>
-            <option value="yc-launches">YC Launches</option>
-            <option value="techcrunch">TechCrunch</option>
-            <option value="hn-hiring">HN Hiring</option>
-            <option value="exa-funding">Funding News</option>
-            <option value="manual">Manual</option>
-          </select>
+          />
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
         >
-          <label htmlFor="signals-sort" className="sr-only">
-            Sort signals
-          </label>
-          <select
-            id="signals-sort"
+          <EditorialDropdown
+            icon={<ArrowUpDown className="w-3.5 h-3.5" />}
+            label="Sort"
             value={sort}
-            onChange={(e) => setSort(e.target.value as "recent" | "amount")}
-            className="px-3 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-white/10 rounded-md text-sm text-stone-900 dark:text-stone-50 focus:outline-none focus:border-lime-400 transition-colors"
-          >
-            <option value="recent">Most recent</option>
-            <option value="amount">Largest raise</option>
-          </select>
+            options={[
+              { value: "recent", label: "Most recent" },
+              { value: "amount", label: "Largest raise" },
+            ]}
+            onChange={(val) => setSort(val as "recent" | "amount")}
+          />
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
