@@ -485,6 +485,12 @@ function App() {
                 <Route path="lfx-projects" element={<OrgBrowserPage key="LFX" programType="LFX" />} />
                 <Route path="season-of-docs" element={<OrgBrowserPage key="SEASON_OF_DOCS" programType="SEASON_OF_DOCS" />} />
                 <Route path="mlh" element={<OrgBrowserPage key="MLH" programType="MLH" />} />
+                <Route path="summer-of-bitcoin" element={<OrgBrowserPage key="SUMMER_OF_BITCOIN" programType="SUMMER_OF_BITCOIN" />} />
+                <Route path="gssoc" element={<OrgBrowserPage key="GSSOC" programType="GSSOC" />} />
+                <Route path="c4gt" element={<OrgBrowserPage key="C4GT" programType="C4GT" />} />
+                <Route path="ospp" element={<OrgBrowserPage key="OSPP" programType="OSPP" />} />
+                <Route path="season-of-kde" element={<OrgBrowserPage key="SEASON_OF_KDE" programType="SEASON_OF_KDE" />} />
+                <Route path="igalia" element={<OrgBrowserPage key="IGALIA" programType="IGALIA" />} />
                 <Route path="first-pr" element={<FirstPRRoadmapPage />} />
                 <Route path="first-pr/:sectionSlug" element={<FirstPRSectionPage />} />
                 <Route path="gsoc-proposal" element={<GSoCProposalPage />} />
