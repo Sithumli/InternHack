@@ -15,7 +15,10 @@ import {
   PlugZap,
   Download,
   Loader2,
+  ArrowUpDown,
+  Filter,
 } from "lucide-react";
+import { EditorialDropdown } from "../../../components/ui/EditorialDropdown";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchWithDebounce } from "../../../hooks/useSearchWithDebounce";
@@ -559,40 +562,32 @@ export default function MyApplicationsPage() {
       )}
 
       {/* Filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <label htmlFor="sort" className="text-[10px] font-mono uppercase tracking-widest text-stone-500">
-            Sort by
-          </label>
-          <select
-            id="sort"
-            value={sortOption}
-            onChange={(e) => setSortOption(e.target.value as typeof sortOption)}
-            className="text-xs font-mono bg-white dark:bg-stone-900 border border-stone-200 dark:border-white/10 rounded-md px-2 py-1.5 text-stone-900 dark:text-stone-50 focus:outline-none focus:border-lime-400 transition-colors cursor-pointer"
-          >
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-            <option value="company">Company A-Z</option>
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label htmlFor="status" className="text-[10px] font-mono uppercase tracking-widest text-stone-500">
-            Status
-          </label>
-          <select
-            id="status"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-            className="text-xs font-mono bg-white dark:bg-stone-900 border border-stone-200 dark:border-white/10 rounded-md px-2 py-1.5 text-stone-900 dark:text-stone-50 focus:outline-none focus:border-lime-400 transition-colors cursor-pointer"
-          >
-            <option value="ALL">All statuses</option>
-            {STATUS_ORDER.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <EditorialDropdown
+          icon={<ArrowUpDown className="w-3.5 h-3.5" />}
+          label="Sort by"
+          value={sortOption}
+          options={[
+            { value: "newest", label: "Newest first" },
+            { value: "oldest", label: "Oldest first" },
+            { value: "company", label: "Company A-Z" },
+          ]}
+          onChange={(val) => setSortOption(val as typeof sortOption)}
+        />
+
+        <EditorialDropdown
+          icon={<Filter className="w-3.5 h-3.5" />}
+          label="Status"
+          value={statusFilter}
+          options={[
+            { value: "ALL", label: "All statuses" },
+            ...STATUS_ORDER.map((s) => ({
+              value: s,
+              label: STATUS_LABELS[s],
+            })),
+          ]}
+          onChange={(val) => setStatusFilter(val as typeof statusFilter)}
+        />
       </div>
 
       {/* Search */}

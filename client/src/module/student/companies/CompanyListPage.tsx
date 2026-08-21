@@ -21,6 +21,7 @@ import {
   Clock,
 } from "lucide-react";
 import { SEO } from "../../../components/SEO";
+import { EditorialDropdown } from "../../../components/ui/EditorialDropdown";
 import { canonicalUrl } from "../../../lib/seo.utils";
 import { Navbar } from "../../../components/Navbar";
 import { Footer } from "../../../components/Footer";
@@ -28,7 +29,6 @@ import { ResultCount } from "../../../components/ui/ResultCount";
 import api, { SERVER_URL } from "../../../lib/axios";
 import { queryKeys } from "../../../lib/query-keys";
 import { cn } from "@/lib/utils";
-import { EditorialDropdown } from "../../../components/ui/EditorialDropdown";
 import type {
   Company,
   CityCount,
@@ -785,46 +785,52 @@ export default function CompanyListPage() {
                       <label className="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">
                         company size
                       </label>
-                      <select
+                      <EditorialDropdown
+                        icon={<Users className="w-3.5 h-3.5" />}
+                        label="size"
                         value={size}
-                        onChange={(e) => updateParam("size", e.target.value)}
-                        className="w-full px-3 py-2 bg-white dark:bg-stone-950 border border-stone-300 dark:border-white/10 rounded-md text-sm focus:outline-none focus:border-lime-400 dark:text-stone-50"
-                      >
-                        <option value="">All sizes</option>
-                        <option value="STARTUP">Startup</option>
-                        <option value="SMALL">Small</option>
-                        <option value="MEDIUM">Medium</option>
-                        <option value="LARGE">Large</option>
-                        <option value="ENTERPRISE">Enterprise</option>
-                      </select>
+                        onChange={(v) => updateParam("size", v)}
+                        options={[
+                          { value: "", label: "All sizes" },
+                          { value: "STARTUP", label: "Startup" },
+                          { value: "SMALL", label: "Small" },
+                          { value: "MEDIUM", label: "Medium" },
+                          { value: "LARGE", label: "Large" },
+                          { value: "ENTERPRISE", label: "Enterprise" },
+                        ]}
+                      />
                     </div>
                     <div>
                       <label className="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">
                         hiring status
                       </label>
-                      <select
+                      <EditorialDropdown
+                        icon={<Building2 className="w-3.5 h-3.5" />}
+                        label="hiring"
                         value={hiring}
-                        onChange={(e) => updateParam("hiring", e.target.value)}
-                        className="w-full px-3 py-2 bg-white dark:bg-stone-950 border border-stone-300 dark:border-white/10 rounded-md text-sm focus:outline-none focus:border-lime-400 dark:text-stone-50"
-                      >
-                        <option value="">All</option>
-                        <option value="true">Hiring now</option>
-                      </select>
+                        onChange={(v) => updateParam("hiring", v)}
+                        options={[
+                          { value: "", label: "All" },
+                          { value: "true", label: "Hiring now" },
+                        ]}
+                      />
                     </div>
                     <div>
                       <label className="block text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-2">
                         min rating
                       </label>
-                      <select
+                      <EditorialDropdown
+                        icon={<Star className="w-3.5 h-3.5" />}
+                        label="rating"
                         value={minRating}
-                        onChange={(e) => updateParam("minRating", e.target.value)}
-                        className="w-full px-3 py-2 bg-white dark:bg-stone-950 border border-stone-300 dark:border-white/10 rounded-md text-sm focus:outline-none focus:border-lime-400 dark:text-stone-50"
-                      >
-                        <option value="">Any</option>
-                        <option value="4">4+ stars</option>
-                        <option value="3">3+ stars</option>
-                        <option value="2">2+ stars</option>
-                      </select>
+                        onChange={(v) => updateParam("minRating", v)}
+                        options={[
+                          { value: "", label: "Any" },
+                          { value: "4", label: "4+ stars" },
+                          { value: "3", label: "3+ stars" },
+                          { value: "2", label: "2+ stars" },
+                        ]}
+                      />
                     </div>
                   </div>
                 </motion.div>

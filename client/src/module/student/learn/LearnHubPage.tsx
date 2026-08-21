@@ -12,7 +12,6 @@ import {
   type TrackCategory,
 } from "./tracks";
 import { TrackCard } from "./TrackCard";
-import { Button } from "../../../components/ui/button";
 import { EditorialDropdown } from "../../../components/ui/EditorialDropdown";
 import { useTrackProgress } from "./useTrackProgress";
 
@@ -219,33 +218,48 @@ const grouped = useMemo(() => {
             
             {/* Category Tabs */}
             <div className="flex flex-wrap items-center gap-1 bg-stone-100 dark:bg-stone-800 p-1 rounded-md">
-              <Button
+              <button
+                type="button"
                 onClick={() => setActiveCategory("All")}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${activeCategory === "All" ? "bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white" : "bg-transparent border-transparent text-stone-500 hover:bg-transparent hover:text-stone-700 dark:hover:text-stone-300"}`}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer select-none ${
+                  activeCategory === "All"
+                    ? "bg-white dark:bg-stone-700 shadow-xs text-stone-950 dark:text-stone-50 font-semibold"
+                    : "text-stone-600 dark:text-stone-400 hover:text-stone-950 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-stone-700/50"
+                }`}
               >
                 All
-              </Button>
+              </button>
               {CATEGORY_ORDER.map((cat) => (
-                <Button
+                <button
                   key={cat}
+                  type="button"
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all ${activeCategory === cat ? "bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white" : "bg-transparent border-transparent text-stone-500 hover:bg-transparent hover:text-stone-700 dark:hover:text-stone-300"}`}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md capitalize transition-all cursor-pointer select-none ${
+                    activeCategory === cat
+                      ? "bg-white dark:bg-stone-700 shadow-xs text-stone-950 dark:text-stone-50 font-semibold"
+                      : "text-stone-600 dark:text-stone-400 hover:text-stone-950 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-stone-700/50"
+                  }`}
                 >
                   {CATEGORY_LABEL[cat] || cat}
-                </Button>
+                </button>
               ))}
             </div>
 
             {/* Difficulty Chips */}
             <div className="flex items-center gap-2">
               {["All", "Beginner", "Intermediate", "Advanced"].map((level) => (
-              <Button
-                key={level}
-                onClick={() => setActiveDifficulty(level)}
-                className={`px-3 py-1 text-xs font-medium rounded-md border transition-colors ${activeDifficulty === level ? "bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 border-stone-900 dark:border-stone-100" : "bg-transparent text-stone-500 border-stone-300 dark:border-stone-700 hover:border-stone-400"}`}
-              >
-                {level}
-              </Button>
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setActiveDifficulty(level)}
+                  className={`px-3 py-1 text-xs font-medium rounded-md border transition-colors cursor-pointer select-none ${
+                    activeDifficulty === level
+                      ? "bg-stone-900 dark:bg-stone-100 text-stone-50 dark:text-stone-950 border-stone-900 dark:border-stone-100 font-semibold"
+                      : "bg-transparent text-stone-600 dark:text-stone-400 border-stone-300 dark:border-stone-700 hover:border-stone-400 dark:hover:border-stone-500 hover:text-stone-950 dark:hover:text-stone-100"
+                  }`}
+                >
+                  {level}
+                </button>
               ))}
             </div>
           </div>

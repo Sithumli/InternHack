@@ -389,17 +389,18 @@ export default function NotesDashboardPage() {
             {/* Tabs */}
             <div className="flex flex-wrap items-center gap-1 bg-stone-100 dark:bg-stone-800 p-1 rounded-md max-w-full overflow-x-auto">
               {tabs.map((tab) => (
-                <Button
+                <button
                   key={tab}
+                  type="button"
                   onClick={() => setActiveTab(tab)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-all cursor-pointer select-none ${
                     activeTab === tab
-                      ? "bg-white dark:bg-stone-700 shadow-xs text-stone-900 dark:text-white"
-                      : "bg-transparent border-transparent text-stone-500 hover:bg-transparent hover:text-stone-700 dark:hover:text-stone-300"
+                      ? "bg-white dark:bg-stone-700 shadow-xs text-stone-950 dark:text-stone-50 font-semibold"
+                      : "text-stone-600 dark:text-stone-400 hover:text-stone-950 dark:hover:text-stone-100 hover:bg-stone-200/60 dark:hover:bg-stone-700/50"
                   }`}
                 >
                   {tab === "All" ? "All Notes" : CONTENT_TYPE_LABELS[tab]}
-                </Button>
+                </button>
               ))}
             </div>
 

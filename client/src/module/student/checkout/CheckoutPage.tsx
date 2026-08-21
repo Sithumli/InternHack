@@ -272,9 +272,6 @@ export default function CheckoutPage() {
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="text-center mb-12 mt-6"
       >
-        <p className="text-[10px] font-mono uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-3">
-          / pricing
-        </p>
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-stone-950 dark:text-white mb-3">
           One plan.{" "}
           <span className="text-lime-500 dark:text-lime-400">Everything unlocked.</span>
@@ -284,25 +281,41 @@ export default function CheckoutPage() {
         </p>
 
         {/* Billing toggle */}
-        <div className="inline-flex items-center gap-0.5 bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-white/10 rounded-md p-1">
+        <div className="relative inline-flex items-center bg-stone-100 dark:bg-stone-900 border border-stone-200 dark:border-white/10 rounded-md p-1">
           <button
+            type="button"
             onClick={() => setBilling("monthly")}
-            className={`px-5 py-2 rounded text-sm font-medium transition-all ${
+            className={`relative px-5 py-2 rounded text-sm font-medium cursor-pointer transition-colors duration-200 z-10 select-none ${
               billing === "monthly"
-                ? "bg-stone-950 dark:bg-white text-white dark:text-stone-950 shadow-sm"
-                : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
+                ? "text-white dark:text-stone-950 font-bold"
+                : "text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200"
             }`}
           >
+            {billing === "monthly" && (
+              <motion.div
+                layoutId="activeBillingTab"
+                transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                className="absolute inset-0 bg-stone-950 dark:bg-white rounded shadow-sm z-[-1]"
+              />
+            )}
             Monthly
           </button>
           <button
+            type="button"
             onClick={() => setBilling("yearly")}
-            className={`px-5 py-2 rounded text-sm font-medium transition-all flex items-center gap-2 ${
+            className={`relative px-5 py-2 rounded text-sm font-medium cursor-pointer transition-colors duration-200 flex items-center gap-2 z-10 select-none ${
               billing === "yearly"
-                ? "bg-stone-950 dark:bg-white text-white dark:text-stone-950 shadow-sm"
-                : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
+                ? "text-white dark:text-stone-950 font-bold"
+                : "text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200"
             }`}
           >
+            {billing === "yearly" && (
+              <motion.div
+                layoutId="activeBillingTab"
+                transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                className="absolute inset-0 bg-stone-950 dark:bg-white rounded shadow-sm z-[-1]"
+              />
+            )}
             Yearly
             <span className="px-1.5 py-0.5 bg-lime-400 text-stone-950 text-[10px] font-bold rounded-sm tracking-wide">
               -25%
@@ -351,20 +364,37 @@ export default function CheckoutPage() {
             {/* Price */}
             <div className="mb-5">
               <div className="flex items-baseline gap-1">
-                <span className={`text-5xl font-bold tabular-nums ${plan.highlighted ? "text-white" : "text-stone-950 dark:text-white"}`}>
-                  {plan.price === 0 ? "₹0" : `₹${billing === "monthly" ? plan.price : plan.yearlyPrice}`}
-                </span>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={billing}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.15 }}
+                    className={`text-5xl font-bold tabular-nums ${plan.highlighted ? "text-white" : "text-stone-950 dark:text-white"}`}
+                  >
+                    {plan.price === 0 ? "₹0" : `₹${billing === "monthly" ? plan.price : plan.yearlyPrice}`}
+                  </motion.span>
+                </AnimatePresence>
                 {plan.price > 0 && (
                   <span className={`text-sm ${plan.highlighted ? "text-stone-400" : "text-stone-400"}`}>
                     /{billing === "monthly" ? "mo" : "yr"}
                   </span>
                 )}
               </div>
-              {billing === "yearly" && plan.price > 0 && (
-                <p className="text-xs text-lime-400 mt-1 font-medium">
-                  Save ₹{plan.price * 12 - plan.yearlyPrice} vs monthly
-                </p>
-              )}
+              <AnimatePresence>
+                {billing === "yearly" && plan.price > 0 && (
+                  <motion.p
+                    initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                    animate={{ opacity: 1, height: "auto", marginTop: 4 }}
+                    exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="text-xs text-lime-400 font-medium overflow-hidden"
+                  >
+                    Save ₹{plan.price * 12 - plan.yearlyPrice} vs monthly
+                  </motion.p>
+                )}
+              </AnimatePresence>
             </div>
 
             <p className={`text-sm mb-6 leading-relaxed ${plan.highlighted ? "text-stone-400" : "text-stone-500 dark:text-stone-400"}`}>
@@ -413,9 +443,9 @@ export default function CheckoutPage() {
         viewport={{ once: true }}
         className="mb-20"
       >
-        <p className="text-[10px] font-mono uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-6 text-center">
-          / how it works
-        </p>
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-stone-950 dark:text-white">How it works</h2>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-3xl mx-auto">
           {HOW_IT_WORKS.map((item, i) => (
             <motion.div
@@ -444,9 +474,6 @@ export default function CheckoutPage() {
         className="mb-20"
       >
         <div className="text-center mb-8">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-2">
-            / what you unlock
-          </p>
           <h2 className="text-2xl font-bold text-stone-950 dark:text-white">Everything in Pro</h2>
         </div>
 
@@ -473,9 +500,6 @@ export default function CheckoutPage() {
         className="mb-20"
       >
         <div className="text-center mb-8">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-2">
-            / students
-          </p>
           <h2 className="text-2xl font-bold text-stone-950 dark:text-white">Loved by students</h2>
         </div>
 
@@ -531,9 +555,6 @@ export default function CheckoutPage() {
         className="max-w-2xl mx-auto mb-20"
       >
         <div className="text-center mb-8">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-2">
-            / faq
-          </p>
           <h2 className="text-2xl font-bold text-stone-950 dark:text-white">Common questions</h2>
         </div>
 
@@ -579,7 +600,6 @@ export default function CheckoutPage() {
           <div className="absolute -bottom-24 -left-24 w-64 h-64 rounded-full bg-lime-400/5 blur-3xl" />
         </div>
         <div className="relative z-10">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-stone-500 mb-3">/ get started</p>
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
             Ready to supercharge your career?
           </h2>

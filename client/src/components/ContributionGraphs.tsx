@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { GitHubCalendar } from "react-github-calendar";
 import { ActivityCalendar } from "react-activity-calendar";
 import { useQuery } from "@tanstack/react-query";
@@ -75,17 +76,25 @@ export default function ContributionGraphs({ githubUsername, leetcodeUsername, s
         </h3>
 
         {availableTabs.length > 1 && (
-          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+          <div className="relative flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
             {availableTabs.map((tab) => (
               <button
                 key={tab}
+                type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                className={`relative px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer z-10 select-none ${
                   activeTab === tab
-                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                    ? "text-stone-950 dark:text-stone-50 font-semibold"
+                    : "text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
                 }`}
               >
+                {activeTab === tab && (
+                  <motion.div
+                    layoutId="activeContribTab"
+                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                    className="absolute inset-0 bg-white dark:bg-gray-700 rounded-md shadow-sm z-[-1]"
+                  />
+                )}
                 {tab}
               </button>
             ))}
